@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Integration Tests</title>
+</head>
+<body>
+<div id="app-root"></div>
+<pre id="output"></pre>
+<script src="../vendor/echarts.min.js"></script>
+<script src="../vendor/pako.min.js"></script>
+<script>
+const testPromises = [];
+
+function test(name, fn) {
+  testPromises.push(
+    Promise.resolve().then(fn).then(() => `✅ ${name}`)
+      .catch(e => `❌ ${name}: ${e.message}`)
+  );
+}
+
+function assert(condition, msg) {
+  if (!condition) throw new Error(msg || 'Assertion failed');
+}
+
+// Test 1: State roundtrip — encode → decode → equals original
+test('encodeStateToHash + decodeStateFromHash roundtrip', async () => {
+  const { encodeStateToHash, decodeStateFromHash } = await import('../js/state.js');
+  const state = {
+    name: 'Test',
+    iterations: 5000,
+    factors: {
+      risk: {
+        expanded: true,
+        children: {
+          lef: { expanded: false, low: 2, high: 8 },
+          lm: { expanded: false, low: 100000, high: 3000000 },
+        }
+      }
+    }
+  };
+  const hash = encodeStateToHash(state);
+  const decoded = decodeStateFromHash(hash);
+  assert(decoded.name === 'Test', `Expected name 'Test', got ${decoded.name}`);
+  assert(decoded.iterations === 5000, `Expected iterations 5000, got ${decoded.iterations}`);
+  assert(decoded.factors.risk.children.lef.low === 2, `Expected lef.low 2, got ${decoded.factors.risk.children.lef.low}`);
+});
+
+// Test 2: Worker simulation — produces valid, ordered stats
+test('Worker simulation produces valid results', async () => {
+  const result = await new Promise((resolve, reject) => {
+    const w = new Worker('../js/worker.js');
+    w.onmessage = e => { w.terminate(); resolve(e.data); };
+    w.onerror = e => { w.terminate(); reject(new Error(e.message)); };
+    w.postMessage({
+      iterations: 1000,
+      factors: {
+        risk: {
+          expanded: true,
+          children: {
+            lef: { expanded: false, low: 2, high: 8 },
+            lm: { expanded: false, low: 100000, high: 3000000 },
+          }
+        }
+      }
+    });
+  });
+  assert(result.type === 'results', `Expected type 'results', got ${result.type}`);
+  assert(result.stats.min <= result.stats.median, `Expected min <= median: ${result.stats.min} vs ${result.stats.median}`);
+  assert(result.stats.median <= result.stats.p90, `Expected median <= p90: ${result.stats.median} vs ${result.stats.p90}`);
+  assert(result.stats.p90 <= result.stats.max, `Expected p90 <= max: ${result.stats.p90} vs ${result.stats.max}`);
+});
+
+// Test 3: FAIR model completeness — all 19 node IDs exist
+test('FAIR model tree is complete', async () => {
+  const { FAIR } = await import('../js/fair-model.js');
+  const allIds = [
+    'risk', 'lef', 'tef', 'cf', 'poa', 'vuln', 'tcap', 'rs',
+    'lm', 'primary', 'productivity', 'response', 'replacement',
+    'secondary', 'slef', 'slm', 'reputation', 'competitive_advantage', 'fines'
+  ];
+  for (const id of allIds) {
+    const node = FAIR.findNode(id);
+    assert(node, `Missing node: ${id}`);
+  }
+});
+
+// Test 4: i18n loads — English locale returns expected strings
+test('i18n loads English locale', async () => {
+  const { loadI18n } = await import('../js/i18n.js');
+  const i18n = await loadI18n('en');
+  const title = i18n.t('app.title');
+  assert(title === 'FAIR Calculator', `Expected 'FAIR Calculator', got ${title}`);
+  const lefLabel = i18n.t('factor.lef');
+  assert(lefLabel === 'Loss Event Frequency', `Expected 'Loss Event Frequency', got ${lefLabel}`);
+});
+
+// Test 5: Tree UI renders ARIA — tree/treeitem/aria-expanded roles present
+test('Factor tree renders with ARIA roles', async () => {
+  const { FAIR } = await import('../js/fair-model.js');
+  const { FactorTreeUI } = await import('../js/tree-ui.js');
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  new FactorTreeUI(container, FAIR.tree, () => {});
+  const treeRole = container.querySelector('[role="tree"]');
+  assert(treeRole, 'Missing tree role');
+  const treeitemRole = container.querySelector('[role="treeitem"]');
+  assert(treeitemRole, 'Missing treeitem role');
+  const ariaExpanded = container.querySelector('[aria-expanded]');
+  assert(ariaExpanded, 'Missing aria-expanded attribute');
+  document.body.removeChild(container);
+});
+
+// Test 6: ScenarioStore CRUD — save, list, load, remove
+test('ScenarioStore CRUD works', async () => {
+  const { ScenarioStore } = await import('../js/state.js');
+  const store = new ScenarioStore('test-integration-' + Date.now());
+  const id = store.save({ name: 'Test', factors: {}, iterations: 10000 });
+  const listAfterSave = store.list();
+  assert(listAfterSave.length === 1, `Expected 1 item after save, got ${listAfterSave.length}`);
+  const loaded = store.load(id);
+  assert(loaded.name === 'Test', `Expected name 'Test', got ${loaded.name}`);
+  store.remove(id);
+  const listAfterRemove = store.list();
+  assert(listAfterRemove.length === 0, `Expected 0 items after remove, got ${listAfterRemove.length}`);
+});
+
+Promise.all(testPromises).then(results => {
+  document.getElementById('output').textContent = results.join('\n');
+  const failed = results.filter(r => r.startsWith('❌')).length;
+  document.title = failed > 0 ? `FAIL (${failed})` : 'PASS';
+});
+</script>
+</body>
+</html>
