@@ -1,0 +1,144 @@
+{
+  "skip_nav": "Skip to results",
+  "app": {
+    "title": "FAIR Calculator",
+    "subtitle": "Factor Analysis of Information Risk"
+  },
+  "topbar": {
+    "copy_url": "Copy URL",
+    "scenarios": "Scenarios",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "auto": "Auto"
+    }
+  },
+  "input": {
+    "ci_min": "90% CI Min",
+    "ci_max": "90% CI Max",
+    "validation": {
+      "required": "This field is required",
+      "min_less_than_max": "Minimum must be less than maximum",
+      "positive_number": "Must be a positive number"
+    },
+    "unit_labels": {
+      "count": "Count",
+      "days": "Days",
+      "percent": "Percent",
+      "dollars": "Dollars"
+    },
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "results": {
+    "chart_title": "Risk Distribution",
+    "simulating": "Simulating...",
+    "error": "Error during simulation",
+    "axis": {
+      "x": "Annual Loss Exposure ($)",
+      "y": "Probability"
+    },
+    "stats": {
+      "mean": "Mean",
+      "median": "Median",
+      "min": "Min",
+      "max": "Max",
+      "std_dev": "Std Dev",
+      "percentile_5": "5th Percentile",
+      "percentile_95": "95th Percentile"
+    }
+  },
+  "export": {
+    "png": "Export PNG",
+    "svg": "Export SVG"
+  },
+  "scenarios": {
+    "saved": "Scenario saved",
+    "new": "New scenario",
+    "delete": "Delete",
+    "last_modified": "Last modified",
+    "url_copied": "URL copied to clipboard"
+  },
+  "responsive": {
+    "inputs_label": "Inputs",
+    "results_label": "Results"
+  },
+  "factor": {
+    "risk": {
+      "label": "Risk",
+      "tooltip": "Risk is the probable frequency and probable magnitude of future loss"
+    },
+    "lef": {
+      "label": "Loss Event Frequency (LEF)",
+      "tooltip": "How often do loss events occur?"
+    },
+    "tef": {
+      "label": "Threat Event Frequency (TEF)",
+      "tooltip": "How often do threat events occur?"
+    },
+    "cf": {
+      "label": "Contact Frequency (CF)",
+      "tooltip": "How frequently does the threat contact the asset?"
+    },
+    "poa": {
+      "label": "Probability of Action (POA)",
+      "tooltip": "What is the probability the threat will act when they have contact?"
+    },
+    "vuln": {
+      "label": "Vulnerability (VULN)",
+      "tooltip": "What is the probability the asset will be compromised given contact?"
+    },
+    "tcap": {
+      "label": "Threat Capability (TCAP)",
+      "tooltip": "What is the threat's ability to overcome the security controls?"
+    },
+    "rs": {
+      "label": "Resistance Strength (RS)",
+      "tooltip": "How well do your controls resist threats?"
+    },
+    "lm": {
+      "label": "Loss Magnitude (LM)",
+      "tooltip": "What is the financial impact when a loss event occurs?"
+    },
+    "primary": {
+      "label": "Primary Loss",
+      "tooltip": "Direct financial losses from the incident"
+    },
+    "productivity": {
+      "label": "Productivity Loss",
+      "tooltip": "Costs due to downtime and reduced productivity"
+    },
+    "response": {
+      "label": "Response and Recovery",
+      "tooltip": "Costs to respond to and recover from the incident"
+    },
+    "replacement": {
+      "label": "Replacement Costs",
+      "tooltip": "Costs to replace or repair damaged assets"
+    },
+    "secondary": {
+      "label": "Secondary Loss",
+      "tooltip": "Indirect financial losses"
+    },
+    "slef": {
+      "label": "Secondary Loss Event Frequency (SLEF)",
+      "tooltip": "How often do secondary loss events occur relative to primary losses?"
+    },
+    "slm": {
+      "label": "Secondary Loss Magnitude (SLM)",
+      "tooltip": "What is the financial impact of secondary losses?"
+    },
+    "reputation": {
+      "label": "Reputation Damage",
+      "tooltip": "Financial impact from brand damage and loss of customer trust"
+    },
+    "competitive_advantage": {
+      "label": "Competitive Disadvantage",
+      "tooltip": "Loss of market share and competitive position"
+    },
+    "fines": {
+      "label": "Fines and Penalties",
+      "tooltip": "Regulatory fines and legal penalties"
+    }
+  }
+}

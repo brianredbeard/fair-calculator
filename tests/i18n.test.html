@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>i18n Module Tests</title>
+</head>
+<body>
+<pre id="output"></pre>
+<script type="module">
+import { I18n } from '../js/i18n.js';
+
+const results = [];
+
+function test(name, fn) {
+  try {
+    fn();
+    results.push(`✅ ${name}`);
+  } catch (e) {
+    results.push(`❌ ${name}: ${e.message}`);
+  }
+}
+
+function assert(condition, msg) {
+  if (!condition) throw new Error(msg || 'Assertion failed');
+}
+
+function assertEqual(a, b, msg) {
+  if (a !== b) throw new Error(msg || `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+}
+
+function assertClose(a, b, tolerance, msg) {
+  if (Math.abs(a - b) > tolerance)
+    throw new Error(msg || `Expected ~${b}, got ${a} (tolerance: ${tolerance})`);
+}
+
+// Test data
+const testStrings = {
+  'greeting': 'Hello, {name}!',
+  'farewell': 'Goodbye, {name}. See you on {date}.',
+  'simple': 'Simple string'
+};
+
+// t() tests
+test('t() returns string by key', () => {
+  const i18n = new I18n(testStrings);
+  assertEqual(i18n.t('simple'), 'Simple string');
+});
+
+test('t() returns [missing_key] if key not found', () => {
+  const i18n = new I18n(testStrings);
+  assertEqual(i18n.t('nonexistent'), '[missing_nonexistent]');
+});
+
+test('t() interpolates named placeholders like {name}', () => {
+  const i18n = new I18n(testStrings);
+  const result = i18n.t('greeting', { name: 'Alice' });
+  assertEqual(result, 'Hello, Alice!');
+});
+
+test('t() handles multiple placeholders', () => {
+  const i18n = new I18n(testStrings);
+  const result = i18n.t('farewell', { name: 'Bob', date: '2026-03-10' });
+  assertEqual(result, 'Goodbye, Bob. See you on 2026-03-10.');
+});
+
+// formatNumber tests
+test('formatNumber formats with locale separators (1234567.89 → "1,234,567.89")', () => {
+  const i18n = new I18n({}, 'en-US');
+  const result = i18n.formatNumber(1234567.89);
+  assertEqual(result, '1,234,567.89');
+});
+
+test('formatNumber handles integers (1000 → "1,000")', () => {
+  const i18n = new I18n({}, 'en-US');
+  const result = i18n.formatNumber(1000);
+  assertEqual(result, '1,000');
+});
+
+// formatCurrency tests
+test('formatCurrency formats as USD with $ sign', () => {
+  const i18n = new I18n({}, 'en-US', 'USD');
+  const result = i18n.formatCurrency(1000);
+  assert(result.includes('$') && result.includes('1,000'), `Expected USD format with $, got ${result}`);
+});
+
+test('formatCurrency handles decimals', () => {
+  const i18n = new I18n({}, 'en-US', 'USD');
+  const result = i18n.formatCurrency(1234.56);
+  assert(result.includes('$') && result.includes('1,234'), `Expected USD format with decimals, got ${result}`);
+});
+
+// formatCompactCurrency tests
+test('formatCompactCurrency shows K for thousands ($50K)', () => {
+  const i18n = new I18n({}, 'en-US', 'USD');
+  const result = i18n.formatCompactCurrency(50000);
+  assertEqual(result, '$50K');
+});
+
+test('formatCompactCurrency shows M for millions ($1.5M)', () => {
+  const i18n = new I18n({}, 'en-US', 'USD');
+  const result = i18n.formatCompactCurrency(1500000);
+  assertEqual(result, '$1.5M');
+});
+
+test('formatCompactCurrency shows B for billions ($2B)', () => {
+  const i18n = new I18n({}, 'en-US', 'USD');
+  const result = i18n.formatCompactCurrency(2000000000);
+  assertEqual(result, '$2B');
+});
+
+test('formatCompactCurrency shows raw for small values ($999)', () => {
+  const i18n = new I18n({}, 'en-US', 'USD');
+  const result = i18n.formatCompactCurrency(999);
+  assertEqual(result, '$999');
+});
+
+// parseDollarShorthand tests
+test('parseDollarShorthand handles K (50K → 50000)', () => {
+  const i18n = new I18n({});
+  assertEqual(i18n.parseDollarShorthand('50K'), 50000);
+});
+
+test('parseDollarShorthand handles M (1.5M → 1500000)', () => {
+  const i18n = new I18n({});
+  assertEqual(i18n.parseDollarShorthand('1.5M'), 1500000);
+});
+
+test('parseDollarShorthand handles B (2B → 2000000000)', () => {
+  const i18n = new I18n({});
+  assertEqual(i18n.parseDollarShorthand('2B'), 2000000000);
+});
+
+test('parseDollarShorthand handles plain numbers', () => {
+  const i18n = new I18n({});
+  assertEqual(i18n.parseDollarShorthand('5000'), 5000);
+});
+
+test('parseDollarShorthand strips $ and commas', () => {
+  const i18n = new I18n({});
+  assertEqual(i18n.parseDollarShorthand('$1,234'), 1234);
+});
+
+test('parseDollarShorthand returns NaN for non-numeric', () => {
+  const i18n = new I18n({});
+  assert(isNaN(i18n.parseDollarShorthand('not a number')), 'Should return NaN for non-numeric input');
+});
+
+// Display results
+document.getElementById('output').textContent = results.join('\n');
+</script>
+</body>
+</html>
