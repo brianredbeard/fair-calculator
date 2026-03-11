@@ -8,7 +8,8 @@ let treeUI;
 let worker;
 let debounceTimer;
 let echartsCurve;
-// echartsBreakdown removed — breakdown uses pure CSS bars
+let useLogScale = true; // Default to log scale (industry standard for FAIR)
+let lastSimResults = null; // Cache for re-rendering on scale toggle
 let currentScenarioId = null;
 const store = new ScenarioStore();
 
@@ -59,6 +60,10 @@ async function init() {
   document.getElementById('btn-export-svg').addEventListener('click', () => exportChart('svg'));
   document.getElementById('btn-scenarios').addEventListener('click', toggleScenariosDropdown);
   document.getElementById('btn-new-scenario').addEventListener('click', newScenario);
+
+  // Scale toggle
+  document.getElementById('btn-log-scale').addEventListener('click', () => setScale(true));
+  document.getElementById('btn-linear-scale').addEventListener('click', () => setScale(false));
 
   // Setup responsive toggle
   setupResponsiveToggle();
@@ -142,6 +147,7 @@ function runSimulation() {
  * Render simulation results
  */
 function renderResults(data) {
+  lastSimResults = data; // Cache for scale toggle re-render
   const { sortedALE, stats, categoryBreakdown } = data;
 
   renderStats(stats);
@@ -152,6 +158,20 @@ function renderResults(data) {
     document.getElementById('breakdown-section').hidden = false;
   } else {
     document.getElementById('breakdown-section').hidden = true;
+  }
+}
+
+/**
+ * Toggle between log and linear scale, re-render without re-simulating
+ */
+function setScale(log) {
+  useLogScale = log;
+  document.getElementById('btn-log-scale').classList.toggle('active', log);
+  document.getElementById('btn-log-scale').setAttribute('aria-pressed', String(log));
+  document.getElementById('btn-linear-scale').classList.toggle('active', !log);
+  document.getElementById('btn-linear-scale').setAttribute('aria-pressed', String(!log));
+  if (lastSimResults) {
+    renderExceedanceCurve(lastSimResults.sortedALE, lastSimResults.stats);
   }
 }
 
@@ -200,20 +220,26 @@ function getThemeColor(varName, fallback) {
  * Render loss exceedance curve
  */
 function renderExceedanceCurve(sortedALE, stats) {
+  // Filter out zero values for log scale (log(0) is undefined)
+  const nonZeroALE = sortedALE.filter(v => v > 0);
+  const sourceData = useLogScale ? nonZeroALE : sortedALE;
+
   // Downsample to ~200 points for performance
-  const step = Math.max(1, Math.floor(sortedALE.length / 200));
+  const step = Math.max(1, Math.floor(sourceData.length / 200));
   const dataPoints = [];
 
-  for (let i = 0; i < sortedALE.length; i += step) {
-    const loss = sortedALE[i];
-    const exceedanceProbability = 1 - (i / sortedALE.length);
+  for (let i = 0; i < sourceData.length; i += step) {
+    const loss = sourceData[i];
+    const exceedanceProbability = 1 - (i / sourceData.length);
     dataPoints.push([loss, exceedanceProbability]);
   }
 
   // Always include the last point
-  if (dataPoints[dataPoints.length - 1][0] !== sortedALE[sortedALE.length - 1]) {
-    dataPoints.push([sortedALE[sortedALE.length - 1], 0]);
+  if (dataPoints.length > 0 && dataPoints[dataPoints.length - 1][0] !== sourceData[sourceData.length - 1]) {
+    dataPoints.push([sourceData[sourceData.length - 1], 0]);
   }
+
+  const scaleLabel = useLogScale ? 'Annual Loss — Log Scale ($)' : 'Annual Loss ($)';
 
   const option = {
     backgroundColor: 'transparent',
@@ -227,8 +253,8 @@ function renderExceedanceCurve(sortedALE, stats) {
       bottom: '60'
     },
     xAxis: {
-      type: 'value',
-      name: 'Annual Loss ($)',
+      type: useLogScale ? 'log' : 'value',
+      name: scaleLabel,
       nameLocation: 'middle',
       nameGap: 30,
       axisLabel: {

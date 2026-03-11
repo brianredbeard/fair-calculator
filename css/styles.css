@@ -483,6 +483,47 @@ body {
   align-items: center;
 }
 
+.chart-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-block-end: 8px;
+}
+
+.scale-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.scale-btn {
+  background: var(--bg-tertiary);
+  border: none;
+  color: var(--text-secondary);
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.scale-btn:not(:last-child) {
+  border-inline-end: 1px solid var(--border-color);
+}
+
+.scale-btn.active {
+  background: var(--accent-blue);
+  color: var(--bg-primary);
+  font-weight: 600;
+}
+
+.scale-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
 .export-buttons {
   display: flex;
   gap: 8px;

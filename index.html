@@ -48,9 +48,15 @@
         <div id="results-content">
           <div class="results-section">
             <h2 class="section-title">Loss Exceedance Curve</h2>
-            <div class="export-buttons">
-              <button id="btn-export-png" class="btn-small">Export PNG</button>
-              <button id="btn-export-svg" class="btn-small">Export SVG</button>
+            <div class="chart-controls">
+              <div class="scale-toggle">
+                <button id="btn-log-scale" class="scale-btn active" aria-pressed="true">Log Scale</button>
+                <button id="btn-linear-scale" class="scale-btn" aria-pressed="false">Linear</button>
+              </div>
+              <div class="export-buttons">
+                <button id="btn-export-png" class="btn-small">Export PNG</button>
+                <button id="btn-export-svg" class="btn-small">Export SVG</button>
+              </div>
             </div>
             <div id="chart-curve" class="chart-container"></div>
           </div>
