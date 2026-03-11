@@ -377,6 +377,16 @@ body {
    Factor Tree
    ============================================================================ */
 
+.tree-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-end: 12px;
+}
+
+.btn-expand-all {
+  font-size: 12px;
+}
+
 .factor-item {
   margin-block-end: 12px;
   border: 1px solid var(--border-color);

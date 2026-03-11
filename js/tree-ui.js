@@ -238,10 +238,110 @@ export class FactorTreeUI {
   }
 
   /**
+   * Expand all composite factors in the tree.
+   */
+  expandAll() {
+    this._expandRecursive(this.state.risk, this.modelTree);
+    this._render();
+    this.onChange();
+  }
+
+  /**
+   * Collapse all composite factors (except Risk, which stays expanded).
+   */
+  collapseAll() {
+    this._collapseRecursive(this.state.risk, this.modelTree);
+    this._render();
+    this.onChange();
+  }
+
+  _expandRecursive(factorState, modelNode) {
+    if (!modelNode.children) return; // Leaf
+
+    if (!factorState.expanded) {
+      // Expand using proportional split (or remembered children)
+      if (factorState._remembered) {
+        factorState.expanded = true;
+        factorState.children = JSON.parse(JSON.stringify(factorState._remembered));
+        delete factorState._remembered;
+        delete factorState.low;
+        delete factorState.high;
+      } else {
+        factorState.expanded = true;
+        factorState.children = this._proportionalSplit(factorState, modelNode);
+        delete factorState.low;
+        delete factorState.high;
+      }
+    }
+
+    // Recurse into children
+    for (const childModel of modelNode.children) {
+      const childState = factorState.children[childModel.id];
+      if (childState && childModel.children) {
+        this._expandRecursive(childState, childModel);
+      }
+    }
+  }
+
+  _collapseRecursive(factorState, modelNode) {
+    if (!modelNode.children || !factorState.expanded) return;
+
+    // Collapse children first (bottom-up)
+    for (const childModel of modelNode.children) {
+      const childState = factorState.children[childModel.id];
+      if (childState && childModel.children && childState.expanded) {
+        this._collapseRecursive(childState, childModel);
+      }
+    }
+
+    // Don't collapse the Risk root
+    if (modelNode.id === 'risk') return;
+
+    // Now collapse this node
+    factorState._remembered = JSON.parse(JSON.stringify(factorState.children));
+    const rolledUp = this._rollUpChildren(modelNode.id, factorState.children, modelNode);
+    factorState.low = rolledUp.low;
+    factorState.high = rolledUp.high;
+    factorState.expanded = false;
+    delete factorState.children;
+  }
+
+  /**
+   * Check if any composite factor (besides Risk) is currently expanded.
+   */
+  _hasExpandedFactors(factorState = this.state.risk) {
+    if (factorState.children) {
+      for (const [, childState] of Object.entries(factorState.children)) {
+        if (childState.expanded) return true;
+        if (childState.children && this._hasExpandedFactors(childState)) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Render the entire tree
    */
   _render() {
     this.container.innerHTML = '';
+
+    // Expand/Collapse All toggle
+    const toolbar = document.createElement('div');
+    toolbar.className = 'tree-toolbar';
+    const allExpanded = this._hasExpandedFactors();
+    const toggleAllBtn = document.createElement('button');
+    toggleAllBtn.className = 'btn-small btn-expand-all';
+    toggleAllBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+    toggleAllBtn.setAttribute('aria-label', allExpanded ? 'Collapse all factors' : 'Expand all factors');
+    toggleAllBtn.addEventListener('click', () => {
+      if (this._hasExpandedFactors()) {
+        this.collapseAll();
+      } else {
+        this.expandAll();
+      }
+    });
+    toolbar.appendChild(toggleAllBtn);
+    this.container.appendChild(toolbar);
 
     const treeEl = document.createElement('div');
     treeEl.setAttribute('role', 'tree');
