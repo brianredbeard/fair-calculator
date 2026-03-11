@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head><title>Worker Tests</title></head>
+<body>
+<pre id="output"></pre>
+<script>
+const testPromises = [];
+
+function test(name, fn) {
+  testPromises.push(
+    Promise.resolve().then(fn).then(() => `✅ ${name}`)
+      .catch(e => `❌ ${name}: ${e.message}`)
+  );
+}
+function assert(condition, msg) { if (!condition) throw new Error(msg || 'Assertion failed'); }
+
+function runWorker(inputState) {
+  return new Promise((resolve, reject) => {
+    const w = new Worker('../js/worker.js');
+    w.onmessage = (e) => { w.terminate(); resolve(e.data); };
+    w.onerror = (e) => { w.terminate(); reject(new Error(e.message)); };
+    w.postMessage(inputState);
+  });
+}
+
+function makeInput(overrides = {}) {
+  return {
+    iterations: 1000,
+    factors: {
+      risk: {
+        expanded: true,
+        children: {
+          lef: { expanded: false, low: 1, high: 10 },
+          lm:  { expanded: false, low: 50000, high: 5000000 },
+        },
+      },
+    },
+    ...overrides,
+  };
+}
+
+// Test 1: Worker returns results with correct structure
+test('Worker returns results with correct structure', async () => {
+  const result = await runWorker(makeInput());
+  assert(result.type === 'results', `Expected type 'results', got ${result.type}`);
+  assert(Array.isArray(result.sortedALE), 'sortedALE should be an array');
+  assert(typeof result.stats === 'object', 'stats should be an object');
+  assert(typeof result.stats.mean === 'number', 'stats.mean should be a number');
+  assert(typeof result.stats.median === 'number', 'stats.median should be a number');
+  assert(typeof result.stats.p90 === 'number', 'stats.p90 should be a number');
+  assert(typeof result.stats.min === 'number', 'stats.min should be a number');
+  assert(typeof result.stats.max === 'number', 'stats.max should be a number');
+});
+
+// Test 2: Worker returns correct number of samples
+test('Worker returns correct number of samples', async () => {
+  const result = await runWorker(makeInput({ iterations: 500 }));
+  assert(result.sortedALE.length === 500, `Expected 500 samples, got ${result.sortedALE.length}`);
+});
+
+// Test 3: Worker results are sorted ascending
+test('Worker results are sorted ascending', async () => {
+  const result = await runWorker(makeInput({ iterations: 100 }));
+  for (let i = 1; i < result.sortedALE.length; i++) {
+    assert(result.sortedALE[i] >= result.sortedALE[i - 1],
+      `Not sorted at index ${i}: ${result.sortedALE[i - 1]} > ${result.sortedALE[i]}`);
+  }
+});
+
+// Test 4: Worker produces deterministic results for same input
+test('Worker produces deterministic results for same input', async () => {
+  const input = makeInput({ iterations: 200 });
+  const result1 = await runWorker(input);
+  const result2 = await runWorker(input);
+
+  assert(Math.abs(result1.stats.mean - result2.stats.mean) < 0.01,
+    `Mean should be equal: ${result1.stats.mean} vs ${result2.stats.mean}`);
+  assert(Math.abs(result1.stats.median - result2.stats.median) < 0.01,
+    `Median should be equal: ${result1.stats.median} vs ${result2.stats.median}`);
+  assert(Math.abs(result1.stats.p90 - result2.stats.p90) < 0.01,
+    `P90 should be equal: ${result1.stats.p90} vs ${result2.stats.p90}`);
+});
+
+// Test 5: Worker handles expanded LEF (TEF + Vuln sub-factors)
+test('Worker handles expanded LEF', async () => {
+  const input = makeInput({
+    iterations: 100,
+    factors: {
+      risk: {
+        expanded: true,
+        children: {
+          lef: {
+            expanded: true,
+            children: {
+              tef: { expanded: false, low: 5, high: 50 },
+              vuln: { expanded: false, low: 0.1, high: 0.5 },
+            },
+          },
+          lm: { expanded: false, low: 50000, high: 5000000 },
+        },
+      },
+    },
+  });
+
+  const result = await runWorker(input);
+  assert(result.type === 'results', 'Should return results');
+  assert(result.sortedALE.length === 100, 'Should have 100 samples');
+  assert(result.stats.mean > 0, 'Mean should be positive');
+});
+
+// Test 6: Worker handles fully expanded LM with category breakdown
+test('Worker handles fully expanded LM with category breakdown', async () => {
+  const input = makeInput({
+    iterations: 100,
+    factors: {
+      risk: {
+        expanded: true,
+        children: {
+          lef: { expanded: false, low: 1, high: 10 },
+          lm: {
+            expanded: true,
+            children: {
+              primary: {
+                expanded: true,
+                children: {
+                  productivity: { expanded: false, low: 10000, high: 1000000 },
+                  response: { expanded: false, low: 10000, high: 500000 },
+                  replacement: { expanded: false, low: 5000, high: 500000 },
+                },
+              },
+              secondary: { expanded: false, low: 10000, high: 2000000 },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const result = await runWorker(input);
+  assert(result.type === 'results', 'Should return results');
+  assert(typeof result.categoryBreakdown === 'object', 'Should include category breakdown');
+  assert(typeof result.categoryBreakdown.productivity === 'number', 'Should have productivity breakdown');
+  assert(typeof result.categoryBreakdown.response === 'number', 'Should have response breakdown');
+  assert(typeof result.categoryBreakdown.replacement === 'number', 'Should have replacement breakdown');
+  assert(typeof result.categoryBreakdown.secondary === 'number', 'Should have secondary breakdown');
+  assert(result.categoryBreakdown.productivity > 0, 'Productivity should be positive');
+});
+
+// Test 7: Worker posts error on invalid input
+test('Worker posts error on invalid input', async () => {
+  const input = makeInput({
+    factors: {
+      risk: {
+        expanded: true,
+        children: {
+          lef: { expanded: false, low: -5, high: 10 },
+          lm:  { expanded: false, low: 50000, high: 5000000 },
+        },
+      },
+    },
+  });
+
+  const result = await runWorker(input);
+  assert(result.type === 'error', `Expected type 'error', got ${result.type}`);
+  assert(typeof result.message === 'string', 'Error should have a message');
+});
+
+Promise.all(testPromises).then(results => {
+  document.getElementById('output').textContent = results.join('\n');
+  const failed = results.filter(r => r.startsWith('❌')).length;
+  document.title = failed > 0 ? `FAIL (${failed})` : 'PASS';
+});
+</script>
+</body>
+</html>
