@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PRNG & Sampling Tests</title>
+</head>
+<body>
+<pre id="output"></pre>
+<script type="module">
+import {
+  fnv1a32,
+  canonicalJsonStringify,
+  createPRNG,
+  lognormalParams,
+  sampleLognormal
+} from '../js/prng.js';
+
+const results = [];
+
+function test(name, fn) {
+  try {
+    fn();
+    results.push(`✅ ${name}`);
+  } catch (e) {
+    results.push(`❌ ${name}: ${e.message}`);
+  }
+}
+
+function assert(condition, msg) {
+  if (!condition) throw new Error(msg || 'Assertion failed');
+}
+
+function assertEqual(a, b, msg) {
+  if (a !== b) throw new Error(msg || `Expected ${b}, got ${a}`);
+}
+
+function assertClose(a, b, tolerance, msg) {
+  if (Math.abs(a - b) > tolerance)
+    throw new Error(msg || `Expected ~${b}, got ${a} (tolerance: ${tolerance})`);
+}
+
+// fnv1a32 tests
+test('fnv1a32 returns a 32-bit integer', () => {
+  const hash = fnv1a32('test');
+  assert(Number.isInteger(hash), 'Hash should be an integer');
+  assert(hash >= 0 && hash <= 0xFFFFFFFF, 'Hash should be a 32-bit unsigned integer');
+});
+
+test('fnv1a32 is deterministic (same input → same hash)', () => {
+  const hash1 = fnv1a32('hello');
+  const hash2 = fnv1a32('hello');
+  assertEqual(hash1, hash2, 'Same input should produce same hash');
+});
+
+test('fnv1a32 produces different hashes for different inputs', () => {
+  const hash1 = fnv1a32('hello');
+  const hash2 = fnv1a32('world');
+  assert(hash1 !== hash2, 'Different inputs should produce different hashes');
+});
+
+// canonicalJsonStringify tests
+test('canonicalJsonStringify sorts keys alphabetically', () => {
+  const obj = { z: 1, a: 2, m: 3 };
+  const result = canonicalJsonStringify(obj);
+  assertEqual(result, '{"a":2,"m":3,"z":1}', 'Keys should be sorted alphabetically');
+});
+
+test('canonicalJsonStringify sorts nested keys', () => {
+  const obj = { z: { y: 1, x: 2 }, a: { c: 3, b: 4 } };
+  const result = canonicalJsonStringify(obj);
+  assertEqual(result, '{"a":{"b":4,"c":3},"z":{"x":2,"y":1}}', 'Nested keys should be sorted');
+});
+
+test('canonicalJsonStringify handles arrays (no sorting)', () => {
+  const obj = { arr: [3, 1, 2], nested: { arr: ['z', 'a', 'm'] } };
+  const result = canonicalJsonStringify(obj);
+  assertEqual(result, '{"arr":[3,1,2],"nested":{"arr":["z","a","m"]}}', 'Arrays should not be sorted');
+});
+
+// createPRNG tests
+test('createPRNG returns numbers between 0 and 1', () => {
+  const rng = createPRNG(12345);
+  for (let i = 0; i < 100; i++) {
+    const val = rng();
+    assert(val >= 0 && val < 1, `RNG value ${val} should be in [0, 1)`);
+  }
+});
+
+test('createPRNG is deterministic with same seed', () => {
+  const rng1 = createPRNG(42);
+  const rng2 = createPRNG(42);
+  const seq1 = Array.from({ length: 10 }, () => rng1());
+  const seq2 = Array.from({ length: 10 }, () => rng2());
+  for (let i = 0; i < 10; i++) {
+    assertEqual(seq1[i], seq2[i], `Same seed should produce same sequence at index ${i}`);
+  }
+});
+
+test('createPRNG produces different sequences for different seeds', () => {
+  const rng1 = createPRNG(42);
+  const rng2 = createPRNG(43);
+  const val1 = rng1();
+  const val2 = rng2();
+  assert(val1 !== val2, 'Different seeds should produce different sequences');
+});
+
+// lognormalParams tests
+test('lognormalParams computes mu and sigma from 90% CI', () => {
+  const { mu, sigma } = lognormalParams(10, 1000);
+  // Expected: μ ≈ 4.6052, σ ≈ 1.3997
+  assertClose(mu, 4.6052, 0.0001, 'mu should be approximately 4.6052');
+  assertClose(sigma, 1.3997, 0.0001, 'sigma should be approximately 1.3997');
+});
+
+// sampleLognormal tests
+test('sampleLognormal produces positive numbers', () => {
+  const rng = createPRNG(123);
+  const { mu, sigma } = lognormalParams(10, 1000);
+  for (let i = 0; i < 100; i++) {
+    const sample = sampleLognormal(rng, mu, sigma);
+    assert(sample > 0, `Sample ${sample} should be positive`);
+  }
+});
+
+test('sampleLognormal mean is approximately exp(mu + sigma²/2) within 5% tolerance', () => {
+  const rng = createPRNG(456);
+  const { mu, sigma } = lognormalParams(10, 1000);
+  const samples = Array.from({ length: 50000 }, () => sampleLognormal(rng, mu, sigma));
+  const mean = samples.reduce((sum, x) => sum + x, 0) / samples.length;
+  const expected = Math.exp(mu + sigma * sigma / 2);
+  const tolerance = expected * 0.05; // 5% tolerance
+  assertClose(mean, expected, tolerance, `Mean should be approximately ${expected}`);
+});
+
+test('sampleLognormal with clamp constrains to [0, max]', () => {
+  const rng = createPRNG(789);
+  const { mu, sigma } = lognormalParams(10, 1000);
+  const max = 500;
+  for (let i = 0; i < 1000; i++) {
+    const sample = sampleLognormal(rng, mu, sigma, max);
+    assert(sample >= 0 && sample <= max, `Clamped sample ${sample} should be in [0, ${max}]`);
+  }
+});
+
+// Display results
+document.getElementById('output').textContent = results.join('\n');
+</script>
+</body>
+</html>
