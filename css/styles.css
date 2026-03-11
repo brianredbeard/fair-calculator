@@ -1,0 +1,53 @@
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #252545;
+  --bg-tertiary: #2a2a4a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #888;
+  --accent-blue: #7ec8e3;
+  --accent-purple: #c8a8ea;
+  --accent-green: #7ce88c;
+  --accent-yellow: #e8c87c;
+  --accent-red: #e87c7c;
+  --border-color: #2a2a4a;
+  --input-bg: #252545;
+  --input-border: #3a3a5a;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+#top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.app-title { font-weight: 700; font-size: 16px; color: var(--accent-blue); }
+.app-subtitle { margin-inline-start: 12px; font-size: 13px; color: var(--text-secondary); }
+
+#panels { display: flex; flex: 1; }
+
+#input-panel {
+  width: 45%;
+  border-inline-end: 1px solid var(--border-color);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+#results-panel {
+  width: 55%;
+  padding: 20px;
+  overflow-y: auto;
+}
