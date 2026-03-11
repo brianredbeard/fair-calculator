@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,21 +7,72 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <a href="#results-panel" id="skip-nav" class="skip-nav">Skip to results</a>
+
   <div id="app">
     <header id="top-bar">
       <div class="top-bar-left">
         <span class="app-title">FAIR Calculator</span>
         <span class="app-subtitle">Factor Analysis of Information Risk</span>
       </div>
+      <div class="top-bar-center">
+        <input type="text" id="scenario-name" class="scenario-name-input" placeholder="Untitled Scenario" aria-label="Scenario name">
+        <label class="iterations-label">
+          Iterations:
+          <input type="number" id="iterations-input" value="10000" min="1000" max="100000" step="1000" aria-label="Simulation iterations">
+        </label>
+      </div>
       <div class="top-bar-right">
+        <button id="btn-theme" class="top-bar-btn" aria-label="Toggle theme">Dark</button>
+        <button id="btn-copy-url" class="top-bar-btn" aria-label="Copy shareable URL">Copy URL</button>
+        <div class="scenarios-wrapper">
+          <button id="btn-scenarios" class="top-bar-btn" aria-label="Saved scenarios">Scenarios ▾</button>
+          <div id="scenarios-dropdown" class="scenarios-dropdown" hidden>
+            <div id="scenarios-list"></div>
+            <div class="scenarios-actions">
+              <button id="btn-new-scenario" class="btn-small">+ New</button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
+
     <main id="panels">
       <section id="input-panel" aria-label="Risk Factor Inputs">
       </section>
-      <section id="results-panel" aria-label="Simulation Results" aria-live="polite">
+
+      <section id="results-panel" aria-label="Simulation Results" aria-live="polite" tabindex="-1">
+        <div id="simulating-indicator" class="simulating" hidden>
+          <span class="spinner"></span> Simulating...
+        </div>
+        <div id="results-content">
+          <div class="results-section">
+            <h2 class="section-title">Loss Exceedance Curve</h2>
+            <div class="export-buttons">
+              <button id="btn-export-png" class="btn-small">Export PNG</button>
+              <button id="btn-export-svg" class="btn-small">Export SVG</button>
+            </div>
+            <div id="chart-curve" class="chart-container"></div>
+          </div>
+          <div class="results-section">
+            <h2 class="section-title">Summary Statistics</h2>
+            <div id="stats-cards" class="stats-cards"></div>
+          </div>
+          <div id="breakdown-section" class="results-section" hidden>
+            <h2 class="section-title">Loss Category Breakdown</h2>
+            <div id="chart-breakdown" class="chart-container-small"></div>
+            <table class="breakdown-table">
+              <tbody id="breakdown-table"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </main>
+
+    <div id="responsive-toggle" class="responsive-toggle">
+      <button data-panel="inputs" class="toggle-btn active">Inputs</button>
+      <button data-panel="results" class="toggle-btn">Results</button>
+    </div>
   </div>
 
   <script src="vendor/echarts.min.js"></script>
