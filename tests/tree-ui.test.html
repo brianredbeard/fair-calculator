@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Tree UI Tests</title>
+</head>
+<body>
+<div id="test-container" style="display:none"></div>
+<pre id="output"></pre>
+
+<script type="module">
+import { FAIR } from '../js/fair-model.js';
+import { FactorTreeUI } from '../js/tree-ui.js';
+
+const output = document.getElementById('output');
+const container = document.getElementById('test-container');
+let testCount = 0;
+let passCount = 0;
+
+function test(description, fn) {
+  testCount++;
+  try {
+    fn();
+    passCount++;
+    output.textContent += `✓ ${description}\n`;
+  } catch (err) {
+    output.textContent += `✗ ${description}\n  ${err.message}\n`;
+  }
+}
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message || 'Assertion failed');
+  }
+}
+
+function createTree() {
+  container.innerHTML = '';
+  return new FactorTreeUI(container, FAIR.tree, () => {});
+}
+
+// Test 1: renders tree container with role="tree"
+test('renders tree container with role="tree"', () => {
+  const tree = createTree();
+  const treeEl = container.querySelector('[role="tree"]');
+  assert(treeEl !== null, 'Expected tree element with role="tree"');
+});
+
+// Test 2: renders Risk as root with at least 3 treeitems (Risk, LEF, LM)
+test('renders Risk as root with at least 3 treeitems (Risk, LEF, LM)', () => {
+  const tree = createTree();
+  const treeitems = container.querySelectorAll('[role="treeitem"]');
+  assert(treeitems.length >= 3, `Expected at least 3 treeitems, got ${treeitems.length}`);
+
+  const riskItem = container.querySelector('[data-factor-id="risk"]');
+  assert(riskItem !== null, 'Expected Risk treeitem');
+
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  assert(lefItem !== null, 'Expected LEF treeitem');
+
+  const lmItem = container.querySelector('[data-factor-id="lm"]');
+  assert(lmItem !== null, 'Expected LM treeitem');
+});
+
+// Test 3: composite factors have aria-expanded attribute
+test('composite factors have aria-expanded attribute', () => {
+  const tree = createTree();
+  const riskItem = container.querySelector('[data-factor-id="risk"]');
+  assert(riskItem.hasAttribute('aria-expanded'), 'Risk should have aria-expanded');
+
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  assert(lefItem.hasAttribute('aria-expanded'), 'LEF should have aria-expanded');
+
+  const lmItem = container.querySelector('[data-factor-id="lm"]');
+  assert(lmItem.hasAttribute('aria-expanded'), 'LM should have aria-expanded');
+});
+
+// Test 4: leaf factors do NOT have aria-expanded (expand LEF → TEF, expand TEF → check CF)
+test('leaf factors do NOT have aria-expanded (expand LEF → TEF, expand TEF → check CF)', () => {
+  const tree = createTree();
+  tree.toggleExpand('lef'); // Expand LEF
+
+  const tefItem = container.querySelector('[data-factor-id="tef"]');
+  assert(tefItem !== null, 'Expected TEF treeitem after expanding LEF');
+
+  tree.toggleExpand('tef'); // Expand TEF
+
+  const cfItem = container.querySelector('[data-factor-id="cf"]');
+  assert(cfItem !== null, 'Expected CF treeitem after expanding TEF');
+  assert(!cfItem.hasAttribute('aria-expanded'), 'Leaf factor CF should NOT have aria-expanded');
+});
+
+// Test 5: collapsed factor shows low/high input fields (at least 2 inputs for LEF)
+test('collapsed factor shows low/high input fields (at least 2 inputs for LEF)', () => {
+  const tree = createTree();
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  const inputs = lefItem.querySelectorAll('input.ci-input');
+  assert(inputs.length >= 2, `Expected at least 2 inputs for LEF, got ${inputs.length}`);
+});
+
+// Test 6: inputs have aria-label with factor name and "low"
+test('inputs have aria-label with factor name and "low"', () => {
+  const tree = createTree();
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  const lowInput = lefItem.querySelector('input[data-bound="low"]');
+  assert(lowInput !== null, 'Expected low input');
+
+  const ariaLabel = lowInput.getAttribute('aria-label');
+  assert(ariaLabel && ariaLabel.includes('LEF') && ariaLabel.includes('low'),
+    `Expected aria-label to include "LEF" and "low", got "${ariaLabel}"`);
+});
+
+// Test 7: toggleExpand replaces CI inputs with children (expand LEF → TEF and Vuln appear)
+test('toggleExpand replaces CI inputs with children (expand LEF → TEF and Vuln appear)', () => {
+  const tree = createTree();
+  let lefItem = container.querySelector('[data-factor-id="lef"]');
+  const inputRowBefore = lefItem.querySelector('.ci-input-row');
+  assert(inputRowBefore !== null, 'Expected input row before expansion');
+
+  tree.toggleExpand('lef');
+
+  // Re-query LEF after re-render
+  lefItem = container.querySelector('[data-factor-id="lef"]');
+
+  // Check direct children - input row should not be a direct child
+  const directChildren = Array.from(lefItem.children);
+  const hasInputRow = directChildren.some(child => child.classList.contains('ci-input-row'));
+  assert(!hasInputRow, 'Expected no direct ci-input-row child after expansion');
+
+  const tefItem = container.querySelector('[data-factor-id="tef"]');
+  assert(tefItem !== null, 'Expected TEF treeitem after expanding LEF');
+
+  const vulnItem = container.querySelector('[data-factor-id="vuln"]');
+  assert(vulnItem !== null, 'Expected Vuln treeitem after expanding LEF');
+});
+
+// Test 8: toggleExpand again collapses back (TEF disappears)
+test('toggleExpand again collapses back (TEF disappears)', () => {
+  const tree = createTree();
+  tree.toggleExpand('lef'); // Expand
+
+  let tefItem = container.querySelector('[data-factor-id="tef"]');
+  assert(tefItem !== null, 'Expected TEF after expand');
+
+  tree.toggleExpand('lef'); // Collapse
+
+  tefItem = container.querySelector('[data-factor-id="tef"]');
+  assert(tefItem === null, 'Expected TEF to disappear after collapse');
+
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  const inputs = lefItem.querySelectorAll('input.ci-input');
+  assert(inputs.length >= 2, 'Expected inputs to reappear after collapse');
+});
+
+// Test 9: getState() returns factor tree state with risk.expanded=true, lef.low/high as numbers
+test('getState() returns factor tree state with risk.expanded=true, lef.low/high as numbers', () => {
+  const tree = createTree();
+  const state = tree.getState();
+
+  assert(state.risk !== undefined, 'Expected risk in state');
+  assert(state.risk.expanded === true, 'Expected risk.expanded to be true');
+  assert(state.risk.children !== undefined, 'Expected risk.children in state');
+  assert(state.risk.children.lef !== undefined, 'Expected lef in state');
+  assert(typeof state.risk.children.lef.low === 'number', 'Expected lef.low to be a number');
+  assert(typeof state.risk.children.lef.high === 'number', 'Expected lef.high to be a number');
+});
+
+// Test 10: getState() reflects expanded state (expand LEF → state shows lef.expanded=true with tef child)
+test('getState() reflects expanded state (expand LEF → state shows lef.expanded=true with tef child)', () => {
+  const tree = createTree();
+  tree.toggleExpand('lef');
+
+  const state = tree.getState();
+  assert(state.risk.children.lef.expanded === true, 'Expected lef.expanded to be true');
+  assert(state.risk.children.lef.children !== undefined, 'Expected lef.children in state');
+  assert(state.risk.children.lef.children.tef !== undefined, 'Expected tef in expanded lef children');
+});
+
+// Test 11: setState() restores values and expansion state
+test('setState() restores values and expansion state', () => {
+  const tree = createTree();
+  tree.toggleExpand('lef');
+
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  const tefItem = container.querySelector('[data-factor-id="tef"]');
+  assert(tefItem !== null, 'Expected TEF after expand');
+
+  const savedState = tree.getState();
+
+  // Create new tree
+  const tree2 = createTree();
+  tree2.setState(savedState);
+
+  const state2 = tree2.getState();
+  assert(state2.risk.children.lef.expanded === true, 'Expected restored lef.expanded to be true');
+
+  const tefItem2 = container.querySelector('[data-factor-id="tef"]');
+  assert(tefItem2 !== null, 'Expected TEF after setState with expanded LEF');
+});
+
+// Test 12: factor labels have title attribute with tooltip text
+test('factor labels have title attribute with tooltip text', () => {
+  const tree = createTree();
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  const label = lefItem.querySelector('.factor-label');
+  assert(label !== null, 'Expected factor label');
+
+  const title = label.getAttribute('title');
+  assert(title !== null && title.length > 0, 'Expected title attribute with tooltip');
+  assert(title.includes('Loss Event Frequency'), `Expected tooltip to include description, got "${title}"`);
+});
+
+// Test 13: validates low > 0 (set to "0", dispatch change event, check for input-error class or aria-invalid)
+test('validates low > 0 (set to "0", dispatch change event, check for input-error class or aria-invalid)', () => {
+  const tree = createTree();
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  const lowInput = lefItem.querySelector('input[data-bound="low"]');
+
+  lowInput.value = '0';
+  lowInput.dispatchEvent(new Event('change'));
+
+  const hasError = lowInput.classList.contains('input-error') ||
+                   lowInput.getAttribute('aria-invalid') === 'true';
+  assert(hasError, 'Expected input-error class or aria-invalid="true" for value of 0');
+});
+
+// Run summary
+output.textContent += `\n${passCount}/${testCount} tests passed\n`;
+if (passCount === testCount) {
+  output.textContent += '✓ All tests passed!\n';
+}
+</script>
+</body>
+</html>
