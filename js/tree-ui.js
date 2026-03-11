@@ -71,25 +71,26 @@ export class FactorTreeUI {
     }
 
     if (factorState.expanded) {
-      // Collapse: delete children, restore low/high from model defaults
+      // Collapse: roll up children into parent CI, stash children for re-expand
+      factorState._remembered = JSON.parse(JSON.stringify(factorState.children));
+      const rolledUp = this._rollUpChildren(factorId, factorState.children, modelNode);
+      factorState.low = rolledUp.low;
+      factorState.high = rolledUp.high;
       factorState.expanded = false;
       delete factorState.children;
-      factorState.low = modelNode.defaultLow;
-      factorState.high = modelNode.defaultHigh;
-    } else {
-      // Expand: create children from model, delete low/high
+    } else if (factorState._remembered) {
+      // Re-expand: restore stashed children
       factorState.expanded = true;
+      factorState.children = JSON.parse(JSON.stringify(factorState._remembered));
+      delete factorState._remembered;
       delete factorState.low;
       delete factorState.high;
-      factorState.children = {};
-
-      for (const child of modelNode.children) {
-        factorState.children[child.id] = {
-          expanded: false,
-          low: child.defaultLow,
-          high: child.defaultHigh
-        };
-      }
+    } else {
+      // First expand: proportional split of parent values
+      factorState.expanded = true;
+      factorState.children = this._proportionalSplit(factorState, modelNode);
+      delete factorState.low;
+      delete factorState.high;
     }
 
     // Re-render
@@ -128,6 +129,112 @@ export class FactorTreeUI {
       }
     }
     return null;
+  }
+
+  /**
+   * Proportional split: distribute parent's low/high to children
+   * based on each child's default proportion of the parent's defaults.
+   */
+  _proportionalSplit(parentState, modelNode) {
+    const children = {};
+    const defaultLows = modelNode.children.map(c => c.defaultLow);
+    const defaultHighs = modelNode.children.map(c => c.defaultHigh);
+    const totalDefaultLow = defaultLows.reduce((s, v) => s + v, 0);
+    const totalDefaultHigh = defaultHighs.reduce((s, v) => s + v, 0);
+
+    const parentLow = parentState.low || modelNode.defaultLow;
+    const parentHigh = parentState.high || modelNode.defaultHigh;
+
+    modelNode.children.forEach((child, i) => {
+      // For additive factors: split proportionally
+      // For multiplicative factors: use defaults since splitting a product is ambiguous
+      const isAdditive = this._isAdditiveFactor(modelNode.id);
+
+      let childLow, childHigh;
+      if (isAdditive && totalDefaultLow > 0 && totalDefaultHigh > 0) {
+        childLow = parentLow * (defaultLows[i] / totalDefaultLow);
+        childHigh = parentHigh * (defaultHighs[i] / totalDefaultHigh);
+        // Round to reasonable precision
+        childLow = this._roundSensible(childLow);
+        childHigh = this._roundSensible(childHigh);
+      } else {
+        // Multiplicative or special factors: use model defaults
+        childLow = child.defaultLow;
+        childHigh = child.defaultHigh;
+      }
+
+      children[child.id] = {
+        expanded: false,
+        low: childLow,
+        high: childHigh
+      };
+    });
+
+    return children;
+  }
+
+  /**
+   * Roll up children into parent CI on collapse.
+   * Additive: sum of lows / sum of highs
+   * Multiplicative: product of lows / product of highs
+   * Vuln (comparison): preserve the pre-expansion value via approximation
+   */
+  _rollUpChildren(factorId, children, modelNode) {
+    const childLows = {};
+    const childHighs = {};
+    for (const [childId, childState] of Object.entries(children)) {
+      if (childState.expanded && childState.children) {
+        // Recursively roll up nested expanded children
+        const childModel = modelNode.children.find(c => c.id === childId);
+        const rolled = this._rollUpChildren(childId, childState.children, childModel);
+        childLows[childId] = rolled.low;
+        childHighs[childId] = rolled.high;
+      } else {
+        childLows[childId] = childState.low;
+        childHighs[childId] = childState.high;
+      }
+    }
+
+    if (this._isAdditiveFactor(factorId)) {
+      return {
+        low: this._roundSensible(Object.values(childLows).reduce((s, v) => s + v, 0)),
+        high: this._roundSensible(Object.values(childHighs).reduce((s, v) => s + v, 0))
+      };
+    } else if (factorId === 'vuln') {
+      // Vuln comparison: approximate from TCap/RS overlap
+      const tcapLow = childLows.tcap, tcapHigh = childHighs.tcap;
+      const rsLow = childLows.rs, rsHigh = childHighs.rs;
+      // Rough probability that TCap > RS given the ranges
+      const lowEstimate = Math.max(0.01, Math.min(1, (tcapLow - rsHigh) / (tcapHigh - rsLow + 1)));
+      const highEstimate = Math.max(0.01, Math.min(1, (tcapHigh - rsLow) / (tcapHigh - rsLow + 1)));
+      return {
+        low: this._roundSensible(Math.max(0.01, Math.min(lowEstimate, highEstimate))),
+        high: this._roundSensible(Math.min(1, Math.max(lowEstimate, highEstimate)))
+      };
+    } else {
+      // Multiplicative: product of lows / product of highs
+      return {
+        low: this._roundSensible(Object.values(childLows).reduce((s, v) => s * v, 1)),
+        high: this._roundSensible(Object.values(childHighs).reduce((s, v) => s * v, 1))
+      };
+    }
+  }
+
+  /**
+   * Check if a factor uses additive combination (sum) vs multiplicative (product).
+   */
+  _isAdditiveFactor(factorId) {
+    return ['lm', 'primary', 'slm'].includes(factorId);
+  }
+
+  /**
+   * Round to sensible significant figures for display.
+   */
+  _roundSensible(value) {
+    if (value === 0) return 0.001;
+    if (value >= 1000) return Math.round(value);
+    if (value >= 1) return Math.round(value * 100) / 100;
+    return Math.round(value * 10000) / 10000;
   }
 
   /**
