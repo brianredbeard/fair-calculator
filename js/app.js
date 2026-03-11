@@ -8,7 +8,7 @@ let treeUI;
 let worker;
 let debounceTimer;
 let echartsCurve;
-let echartsBreakdown;
+// echartsBreakdown removed — breakdown uses pure CSS bars
 let currentScenarioId = null;
 const store = new ScenarioStore();
 
@@ -46,12 +46,9 @@ async function init() {
     treeUI.setState(initialState);
   }
 
-  // Initialize ECharts instances
+  // Initialize ECharts for the exceedance curve only (breakdown uses CSS bars)
   const curveContainer = document.getElementById('chart-curve');
-  const breakdownContainer = document.getElementById('chart-breakdown');
-
   echartsCurve = window.echarts.init(curveContainer);
-  echartsBreakdown = window.echarts.init(breakdownContainer);
 
   // Wire event listeners
   document.getElementById('scenario-name').addEventListener('input', onInputChange);
@@ -71,9 +68,7 @@ async function init() {
     if (echartsCurve) {
       echartsCurve.resize();
     }
-    if (echartsBreakdown) {
-      echartsBreakdown.resize();
-    }
+    // Breakdown uses CSS bars, no resize needed
   });
 
   // Render scenarios list
@@ -337,99 +332,47 @@ function renderExceedanceCurve(sortedALE, stats) {
     ]
   };
 
-  echartsCurve.setOption(option);
+  echartsCurve.setOption(option, { notMerge: true });
 }
 
 /**
- * Render category breakdown
+ * Render category breakdown as pure CSS bars + table (no ECharts)
  */
 function renderCategoryBreakdown(breakdown) {
-  // Sort categories by value descending
   const categories = Object.entries(breakdown)
     .sort((a, b) => b[1] - a[1])
     .map(([cat, value]) => ({ category: cat, value }));
 
-  // Chart data
-  const chartData = categories.map(item => ({
-    name: formatCategoryName(item.category),
-    value: item.value
-  }));
+  const maxValue = categories.length > 0 ? categories[0].value : 1;
+  const total = categories.reduce((sum, c) => sum + c.value, 0);
 
-  const option = {
-    backgroundColor: 'transparent',
-    textStyle: {
-      color: getThemeColor('--color-text', '#e0e0e0')
-    },
-    grid: {
-      left: 20,
-      right: 30,
-      top: 10,
-      bottom: 30,
-      containLabel: true
-    },
-    xAxis: {
-      type: 'value',
-      axisLabel: {
-        formatter: (value) => i18n.formatCompactCurrency(value),
-        fontSize: 11
-      },
-      axisLine: {
-        lineStyle: {
-          color: getThemeColor('--border-color', '#444')
-        }
-      }
-    },
-    yAxis: {
-      type: 'category',
-      data: chartData.map(d => d.name),
-      axisLabel: {
-        fontSize: 12
-      },
-      axisLine: {
-        lineStyle: {
-          color: getThemeColor('--border-color', '#444')
-        }
-      }
-    },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      },
-      formatter: (params) => {
-        const point = params[0];
-        return `${point.name}: ${i18n.formatCurrency(point.value)}`;
-      }
-    },
-    series: [
-      {
-        type: 'bar',
-        data: chartData.map(d => d.value),
-        itemStyle: {
-          color: getThemeColor('--color-accent', '#00d4ff')
-        }
-      }
-    ]
-  };
+  const colors = [
+    'var(--accent-blue)', 'var(--accent-purple)', 'var(--accent-green)',
+    'var(--accent-yellow)', 'var(--accent-red)'
+  ];
 
-  echartsBreakdown.setOption(option);
-
-  // Render table
+  // Render bars + table combined
   const tableBody = document.getElementById('breakdown-table');
   tableBody.innerHTML = '';
 
-  categories.forEach(item => {
+  categories.forEach((item, idx) => {
+    const pct = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
+    const barWidth = maxValue > 0 ? ((item.value / maxValue) * 100).toFixed(1) : '0';
+    const color = colors[idx % colors.length];
+    const name = formatCategoryName(item.category);
+
     const row = document.createElement('tr');
+    row.className = 'breakdown-row';
 
-    const nameCell = document.createElement('td');
-    nameCell.textContent = formatCategoryName(item.category);
+    row.innerHTML = `
+      <td class="breakdown-name">${name}</td>
+      <td class="breakdown-bar-cell">
+        <div class="breakdown-bar" style="width:${barWidth}%;background:${color}"></div>
+      </td>
+      <td class="breakdown-value">${i18n.formatCompactCurrency(item.value)}</td>
+      <td class="breakdown-pct">${pct}%</td>
+    `;
 
-    const valueCell = document.createElement('td');
-    valueCell.textContent = i18n.formatCurrency(item.value);
-    valueCell.style.textAlign = 'right';
-
-    row.appendChild(nameCell);
-    row.appendChild(valueCell);
     tableBody.appendChild(row);
   });
 }
@@ -820,20 +763,15 @@ function setTheme(theme) {
   const themeLabels = { dark: 'Dark', light: 'Light', 'high-contrast': 'High Contrast' };
   btn.textContent = themeLabels[theme] || theme;
 
-  // Re-render charts if initialized
-  if (echartsCurve && echartsBreakdown) {
-    // Dispose and re-initialize to pick up new theme colors
+  // Re-render exceedance curve with new theme colors
+  if (echartsCurve) {
     echartsCurve.dispose();
-    echartsBreakdown.dispose();
-
-    const curveContainer = document.getElementById('chart-curve');
-    const breakdownContainer = document.getElementById('chart-breakdown');
-
-    echartsCurve = window.echarts.init(curveContainer);
-    echartsBreakdown = window.echarts.init(breakdownContainer);
-
-    // Re-run simulation to re-render with new theme
-    runSimulation();
+    // Wait for CSS theme transition to complete before re-init
+    requestAnimationFrame(() => {
+      const curveContainer = document.getElementById('chart-curve');
+      echartsCurve = window.echarts.init(curveContainer);
+      runSimulation();
+    });
   }
 }
 
@@ -870,7 +808,7 @@ function setupResponsiveToggle() {
         resultsPanel.classList.add('mobile-visible');
         // Resize charts when results become visible
         if (echartsCurve) echartsCurve.resize();
-        if (echartsBreakdown) echartsBreakdown.resize();
+        // Breakdown uses CSS bars, no resize needed
       }
     });
   });

@@ -496,14 +496,6 @@ body {
   border-radius: 6px;
 }
 
-.chart-container-small {
-  inline-size: 100%;
-  block-size: 200px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  margin-block-end: 12px;
-}
 
 .stats-cards {
   display: flex;
@@ -544,17 +536,51 @@ body {
   font-size: 14px;
 }
 
-.breakdown-table tr {
+.breakdown-row {
   border-block-end: 1px solid var(--border-color);
 }
 
-.breakdown-table tr:last-child {
+.breakdown-row:last-child {
   border-block-end: none;
 }
 
-.breakdown-table td {
-  padding-block: 8px;
-  padding-inline: 8px;
+.breakdown-name {
+  padding-block: 10px;
+  padding-inline: 4px 12px;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.breakdown-bar-cell {
+  padding-block: 10px;
+  padding-inline: 4px;
+  inline-size: 50%;
+}
+
+.breakdown-bar {
+  block-size: 18px;
+  border-radius: 3px;
+  min-inline-size: 4px;
+  transition: width 0.3s ease;
+}
+
+.breakdown-value {
+  padding-block: 10px;
+  padding-inline: 8px 4px;
+  text-align: end;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.breakdown-pct {
+  padding-block: 10px;
+  padding-inline: 4px;
+  text-align: end;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .color-dot {
