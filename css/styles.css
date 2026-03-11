@@ -498,7 +498,7 @@ body {
 
 .chart-container-small {
   inline-size: 100%;
-  block-size: 60px;
+  block-size: 200px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
@@ -714,22 +714,28 @@ body {
     inline-size: 100%;
     border-inline-end: none;
     border-block-end: 1px solid var(--border-color);
+    padding-block-end: 60px; /* space for fixed toggle bar */
   }
 
   #results-panel {
     inline-size: 100%;
+    display: none; /* hidden by default on mobile, toggled by JS */
+    padding-block-end: 60px;
   }
 
-  #input-panel[hidden] {
-    display: none;
+  #results-panel.mobile-visible {
+    display: block;
   }
 
-  #results-panel[hidden] {
+  #input-panel.mobile-hidden {
     display: none;
   }
 
   .responsive-toggle {
     display: flex;
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
   }
 }
 

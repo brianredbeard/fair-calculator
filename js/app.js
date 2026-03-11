@@ -282,9 +282,6 @@ function renderExceedanceCurve(sortedALE, stats) {
         },
         markLine: {
           symbol: 'none',
-          label: {
-            formatter: '{b}: {c}'
-          },
           lineStyle: {
             type: 'dashed',
             width: 1
@@ -294,20 +291,32 @@ function renderExceedanceCurve(sortedALE, stats) {
               name: 'Median',
               xAxis: stats.median,
               label: {
-                formatter: () => `Median: ${i18n.formatCompactCurrency(stats.median)}`
+                position: 'insideStartTop',
+                formatter: () => `Median\n${i18n.formatCompactCurrency(stats.median)}`,
+                fontSize: 11,
+                padding: [2, 4],
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                color: '#fff',
+                borderRadius: 2
               },
               lineStyle: {
-                color: getThemeColor('--color-warning', '#ffa500')
+                color: getThemeColor('--accent-green', '#7ce88c')
               }
             },
             {
-              name: '90th',
+              name: '90th Percentile',
               xAxis: stats.p90,
               label: {
-                formatter: () => `90th: ${i18n.formatCompactCurrency(stats.p90)}`
+                position: 'insideEndTop',
+                formatter: () => `90th Percentile\n${i18n.formatCompactCurrency(stats.p90)}`,
+                fontSize: 11,
+                padding: [2, 4],
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                color: '#fff',
+                borderRadius: 2
               },
               lineStyle: {
-                color: getThemeColor('--color-danger', '#ff4444')
+                color: getThemeColor('--accent-red', '#e87c7c')
               }
             }
           ]
@@ -340,28 +349,35 @@ function renderCategoryBreakdown(breakdown) {
       color: getThemeColor('--color-text', '#e0e0e0')
     },
     grid: {
-      left: '120',
-      right: '20',
-      top: '20',
-      bottom: '40'
+      left: '180',
+      right: '40',
+      top: '10',
+      bottom: '30',
+      containLabel: false
     },
     xAxis: {
       type: 'value',
       axisLabel: {
-        formatter: (value) => i18n.formatCompactCurrency(value)
+        formatter: (value) => i18n.formatCompactCurrency(value),
+        fontSize: 11
       },
       axisLine: {
         lineStyle: {
-          color: getThemeColor('--color-border', '#444')
+          color: getThemeColor('--border-color', '#444')
         }
       }
     },
     yAxis: {
       type: 'category',
       data: chartData.map(d => d.name),
+      axisLabel: {
+        fontSize: 12,
+        width: 160,
+        overflow: 'truncate'
+      },
       axisLine: {
         lineStyle: {
-          color: getThemeColor('--color-border', '#444')
+          color: getThemeColor('--border-color', '#444')
         }
       }
     },
@@ -774,9 +790,11 @@ function exportChart(format) {
 /**
  * Cycle through themes
  */
+const THEMES = ['dark', 'light', 'high-contrast'];
 function cycleTheme() {
   const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  const idx = THEMES.indexOf(currentTheme);
+  const newTheme = THEMES[(idx + 1) % THEMES.length];
   setTheme(newTheme);
 }
 
@@ -789,7 +807,8 @@ function setTheme(theme) {
 
   // Update button text
   const btn = document.getElementById('btn-theme');
-  btn.textContent = theme === 'dark' ? 'Dark' : 'Light';
+  const themeLabels = { dark: 'Dark', light: 'Light', 'high-contrast': 'High Contrast' };
+  btn.textContent = themeLabels[theme] || theme;
 
   // Re-render charts if initialized
   if (echartsCurve && echartsBreakdown) {
@@ -832,13 +851,16 @@ function setupResponsiveToggle() {
       toggleBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
 
-      // Show/hide panels
+      // Toggle classes (CSS media query handles display)
       if (panel === 'inputs') {
-        inputPanel.style.display = 'block';
-        resultsPanel.style.display = 'none';
+        inputPanel.classList.remove('mobile-hidden');
+        resultsPanel.classList.remove('mobile-visible');
       } else {
-        inputPanel.style.display = 'none';
-        resultsPanel.style.display = 'block';
+        inputPanel.classList.add('mobile-hidden');
+        resultsPanel.classList.add('mobile-visible');
+        // Resize charts when results become visible
+        if (echartsCurve) echartsCurve.resize();
+        if (echartsBreakdown) echartsBreakdown.resize();
       }
     });
   });
