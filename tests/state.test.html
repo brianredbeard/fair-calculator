@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>State Management Tests</title>
+</head>
+<body>
+<pre id="output"></pre>
+<script src="../vendor/pako.min.js"></script>
+<script type="module">
+import {
+  encodeStateToHash,
+  decodeStateFromHash,
+  ScenarioStore
+} from '../js/state.js';
+
+const results = [];
+
+function test(name, fn) {
+  try {
+    fn();
+    results.push(`✅ ${name}`);
+  } catch (e) {
+    results.push(`❌ ${name}: ${e.message}`);
+  }
+}
+
+function assert(condition, msg) {
+  if (!condition) throw new Error(msg || 'Assertion failed');
+}
+
+function assertEqual(a, b, msg) {
+  if (a !== b) throw new Error(msg || `Expected ${b}, got ${a}`);
+}
+
+function assertNull(value, msg) {
+  if (value !== null) throw new Error(msg || `Expected null, got ${value}`);
+}
+
+function assertNotNull(value, msg) {
+  if (value === null) throw new Error(msg || `Expected non-null value, got ${value}`);
+}
+
+function assertArrayEqual(a, b, msg) {
+  if (JSON.stringify(a) !== JSON.stringify(b)) {
+    throw new Error(msg || `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+  }
+}
+
+// ====== encodeStateToHash tests ======
+test('encodeStateToHash produces a non-empty string', () => {
+  const state = { value: 100 };
+  const encoded = encodeStateToHash(state);
+  assert(typeof encoded === 'string' && encoded.length > 0, 'Should produce non-empty string');
+});
+
+test('encodeStateToHash uses base64url (no + or /)', () => {
+  const state = { value: 100, name: 'test' };
+  const encoded = encodeStateToHash(state);
+  assert(!encoded.includes('+'), 'Should not contain +');
+  assert(!encoded.includes('/'), 'Should not contain /');
+  assert(!encoded.includes('='), 'Should not contain padding =');
+});
+
+// ====== decodeStateFromHash tests ======
+test('decodeStateFromHash roundtrips correctly (encode → decode → equals original)', () => {
+  const state = { value: 42, name: 'test', nested: { key: 'value' } };
+  const encoded = encodeStateToHash(state);
+  const decoded = decodeStateFromHash(encoded);
+  assertArrayEqual(decoded, state, 'Decoded state should equal original');
+});
+
+test('decodeStateFromHash returns null for empty string', () => {
+  const result = decodeStateFromHash('');
+  assertNull(result, 'Should return null for empty string');
+});
+
+test('decodeStateFromHash returns null for invalid data', () => {
+  const result = decodeStateFromHash('invalid-base64url!!!');
+  assertNull(result, 'Should return null for invalid data');
+});
+
+test('decodeStateFromHash returns null for valid base64url that decodes to non-JSON', () => {
+  // "not json" in base64url
+  const result = decodeStateFromHash('bm90IGpzb24');
+  assertNull(result, 'Should return null when inflated data is not JSON');
+});
+
+// ====== ScenarioStore.list() tests ======
+test('ScenarioStore.list() returns empty array initially', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const list = store.list();
+  assertArrayEqual(list, [], 'list() should return empty array initially');
+  localStorage.removeItem(ns);
+});
+
+// ====== ScenarioStore.save() tests ======
+test('ScenarioStore.save() stores a scenario', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const scenario = { name: 'Test Scenario', value: 100 };
+  const id = store.save(scenario);
+  assert(typeof id === 'string' && id.length > 0, 'save() should return a non-empty id');
+  localStorage.removeItem(ns);
+});
+
+// ====== ScenarioStore.load() tests ======
+test('ScenarioStore.load() retrieves by id', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const scenario = { name: 'Test Scenario', value: 100 };
+  const id = store.save(scenario);
+  const loaded = store.load(id);
+  assertNotNull(loaded, 'load() should return non-null');
+  assertEqual(loaded.name, 'Test Scenario', 'Loaded name should match');
+  assertEqual(loaded.value, 100, 'Loaded value should match');
+  localStorage.removeItem(ns);
+});
+
+test('ScenarioStore.load() returns null for non-existent id', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const loaded = store.load('non-existent');
+  assertNull(loaded, 'load() should return null for non-existent id');
+  localStorage.removeItem(ns);
+});
+
+// ====== ScenarioStore.save() updates existing test ======
+test('ScenarioStore.save() updates existing (no duplicates)', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const scenario = { name: 'Original', value: 100 };
+  const id = store.save(scenario);
+  const updated = { name: 'Updated', value: 200 };
+  const id2 = store.save(updated, id);
+  assertEqual(id2, id, 'save() with id should return same id');
+  const list = store.list();
+  assertEqual(list.length, 1, 'Should have exactly 1 scenario, not 2');
+  const loaded = store.load(id);
+  assertEqual(loaded.name, 'Updated', 'Loaded name should be updated');
+  assertEqual(loaded.value, 200, 'Loaded value should be updated');
+  localStorage.removeItem(ns);
+});
+
+// ====== ScenarioStore.remove() tests ======
+test('ScenarioStore.remove() deletes a scenario', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const scenario = { name: 'To Delete', value: 100 };
+  const id = store.save(scenario);
+  let list = store.list();
+  assertEqual(list.length, 1, 'Should have 1 scenario before remove');
+  store.remove(id);
+  list = store.list();
+  assertEqual(list.length, 0, 'Should have 0 scenarios after remove');
+  const loaded = store.load(id);
+  assertNull(loaded, 'Removed scenario should not be loadable');
+  localStorage.removeItem(ns);
+});
+
+// ====== ScenarioStore.save() multiple scenarios test ======
+test('ScenarioStore.save() creates multiple scenarios', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const id1 = store.save({ name: 'Scenario 1' });
+  const id2 = store.save({ name: 'Scenario 2' });
+  const id3 = store.save({ name: 'Scenario 3' });
+  const list = store.list();
+  assertEqual(list.length, 3, 'Should have 3 scenarios');
+  assert(id1 !== id2 && id2 !== id3, 'Each save should generate unique id');
+  localStorage.removeItem(ns);
+});
+
+// ====== Additional: lastModified sorting test ======
+test('ScenarioStore.list() sorts by lastModified descending', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const id1 = store.save({ name: 'First' });
+  // Manually set older timestamp for id1
+  const all1 = JSON.parse(localStorage.getItem(ns));
+  all1[id1].lastModified = Date.now() - 1000; // 1 second ago
+  localStorage.setItem(ns, JSON.stringify(all1));
+  // Save second scenario (will have current timestamp)
+  const id2 = store.save({ name: 'Second' });
+  const list = store.list();
+  assertEqual(list.length, 2, 'Should have 2 scenarios');
+  // Most recent should be first (id2 has newer timestamp)
+  assertEqual(list[0].id, id2, 'Most recent scenario should be first');
+  assertEqual(list[1].id, id1, 'Older scenario should be second');
+  localStorage.removeItem(ns);
+});
+
+// Display results
+document.getElementById('output').textContent = results.join('\n');
+</script>
+</body>
+</html>
