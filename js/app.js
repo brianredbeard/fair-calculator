@@ -148,10 +148,9 @@ function runSimulation() {
  */
 function renderResults(data) {
   const { sortedALE, stats, categoryBreakdown } = data;
-  const iterations = parseInt(document.getElementById('iterations-input').value, 10);
 
   renderStats(stats);
-  renderExceedanceCurve(sortedALE, stats, iterations);
+  renderExceedanceCurve(sortedALE, stats);
 
   if (categoryBreakdown && Object.keys(categoryBreakdown).length > 0) {
     renderCategoryBreakdown(categoryBreakdown);
@@ -205,7 +204,7 @@ function getThemeColor(varName, fallback) {
 /**
  * Render loss exceedance curve
  */
-function renderExceedanceCurve(sortedALE, stats, iterations) {
+function renderExceedanceCurve(sortedALE, stats) {
   // Downsample to ~200 points for performance
   const step = Math.max(1, Math.floor(sortedALE.length / 200));
   const dataPoints = [];
