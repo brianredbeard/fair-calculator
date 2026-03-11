@@ -431,6 +431,14 @@ body {
   font-style: italic;
 }
 
+.factor-description {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-block: 4px 8px;
+  padding-inline-start: 28px;
+}
+
 .factor-children {
   margin-block-start: 8px;
 }

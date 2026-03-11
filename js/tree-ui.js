@@ -204,6 +204,14 @@ export class FactorTreeUI {
 
     itemEl.appendChild(headerEl);
 
+    // Factor description (visible help text)
+    if (modelNode.description) {
+      const descEl = document.createElement('p');
+      descEl.className = 'factor-description';
+      descEl.textContent = modelNode.description;
+      itemEl.appendChild(descEl);
+    }
+
     // Render children or inputs based on expansion state
     if (factorState.expanded && factorState.children) {
       // Render children in a group
