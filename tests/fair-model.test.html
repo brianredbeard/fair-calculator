@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head><title>FAIR Model Tests</title></head>
+<body>
+<pre id="output"></pre>
+<script>
+const results = [];
+function test(name, fn) {
+  try { fn(); results.push(`✅ ${name}`); }
+  catch (e) { results.push(`❌ ${name}: ${e.message}`); }
+}
+function assert(condition, msg) { if (!condition) throw new Error(msg || 'Assertion failed'); }
+function assertEqual(a, b, msg) { if (a !== b) throw new Error(msg || `Expected ${b}, got ${a}`); }
+function assertDeepEqual(a, b, msg) {
+  if (JSON.stringify(a) !== JSON.stringify(b))
+    throw new Error(msg || `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+}
+
+window.addEventListener('load', async () => {
+  const { FAIR } = await import('../js/fair-model.js');
+
+  // Tree structure tests
+  test('FAIR tree has Risk as root', () => {
+    assertEqual(FAIR.tree.id, 'risk', 'Root should be risk');
+    assertEqual(FAIR.tree.label, 'Risk', 'Root label should be Risk');
+  });
+
+  test('Risk has two children: LEF and LM', () => {
+    assert(FAIR.tree.children, 'Risk should have children');
+    assertEqual(FAIR.tree.children.length, 2, 'Risk should have 2 children');
+    assertEqual(FAIR.tree.children[0].id, 'lef', 'First child should be LEF');
+    assertEqual(FAIR.tree.children[1].id, 'lm', 'Second child should be LM');
+  });
+
+  test('LEF has children TEF and Vuln', () => {
+    const lef = FAIR.tree.children[0];
+    assertEqual(lef.children.length, 2, 'LEF should have 2 children');
+    assertEqual(lef.children[0].id, 'tef', 'First child should be TEF');
+    assertEqual(lef.children[1].id, 'vuln', 'Second child should be Vuln');
+  });
+
+  test('TEF has leaf children CF and PoA', () => {
+    const lef = FAIR.tree.children[0];
+    const tef = lef.children[0];
+    assertEqual(tef.children.length, 2, 'TEF should have 2 children');
+    assertEqual(tef.children[0].id, 'cf', 'First child should be CF');
+    assertEqual(tef.children[1].id, 'poa', 'Second child should be PoA');
+    assertEqual(tef.children[0].children, null, 'CF should be a leaf');
+    assertEqual(tef.children[1].children, null, 'PoA should be a leaf');
+  });
+
+  test('Vuln has leaf children TCap and RS', () => {
+    const lef = FAIR.tree.children[0];
+    const vuln = lef.children[1];
+    assertEqual(vuln.children.length, 2, 'Vuln should have 2 children');
+    assertEqual(vuln.children[0].id, 'tcap', 'First child should be TCap');
+    assertEqual(vuln.children[1].id, 'rs', 'Second child should be RS');
+    assertEqual(vuln.children[0].children, null, 'TCap should be a leaf');
+    assertEqual(vuln.children[1].children, null, 'RS should be a leaf');
+  });
+
+  test('LM has children Primary and Secondary', () => {
+    const lm = FAIR.tree.children[1];
+    assertEqual(lm.children.length, 2, 'LM should have 2 children');
+    assertEqual(lm.children[0].id, 'primary', 'First child should be Primary');
+    assertEqual(lm.children[1].id, 'secondary', 'Second child should be Secondary');
+  });
+
+  test('Primary has leaf children Productivity, Response, Replacement', () => {
+    const lm = FAIR.tree.children[1];
+    const primary = lm.children[0];
+    assertEqual(primary.children.length, 3, 'Primary should have 3 children');
+    assertEqual(primary.children[0].id, 'productivity', 'First child should be Productivity');
+    assertEqual(primary.children[1].id, 'response', 'Second child should be Response');
+    assertEqual(primary.children[2].id, 'replacement', 'Third child should be Replacement');
+    assertEqual(primary.children[0].children, null, 'Productivity should be a leaf');
+    assertEqual(primary.children[1].children, null, 'Response should be a leaf');
+    assertEqual(primary.children[2].children, null, 'Replacement should be a leaf');
+  });
+
+  test('Secondary has children SLEF and SLM', () => {
+    const lm = FAIR.tree.children[1];
+    const secondary = lm.children[1];
+    assertEqual(secondary.children.length, 2, 'Secondary should have 2 children');
+    assertEqual(secondary.children[0].id, 'slef', 'First child should be SLEF');
+    assertEqual(secondary.children[1].id, 'slm', 'Second child should be SLM');
+  });
+
+  test('SLM has leaf children Reputation, Competitive Advantage, Fines', () => {
+    const lm = FAIR.tree.children[1];
+    const secondary = lm.children[1];
+    const slm = secondary.children[1];
+    assertEqual(slm.children.length, 3, 'SLM should have 3 children');
+    assertEqual(slm.children[0].id, 'reputation', 'First child should be Reputation');
+    assertEqual(slm.children[1].id, 'competitive', 'Second child should be Competitive Advantage');
+    assertEqual(slm.children[2].id, 'fines', 'Third child should be Fines');
+    assertEqual(slm.children[0].children, null, 'Reputation should be a leaf');
+    assertEqual(slm.children[1].children, null, 'Competitive Advantage should be a leaf');
+    assertEqual(slm.children[2].children, null, 'Fines should be a leaf');
+  });
+
+  test('Leaf factors have correct units', () => {
+    // CF - events/year
+    const cf = FAIR.findNode('cf');
+    assertEqual(cf.unit, 'events/year', 'CF should have unit events/year');
+
+    // PoA - probability
+    const poa = FAIR.findNode('poa');
+    assertEqual(poa.unit, 'probability', 'PoA should have unit probability');
+
+    // TCap - score
+    const tcap = FAIR.findNode('tcap');
+    assertEqual(tcap.unit, 'score', 'TCap should have unit score');
+
+    // RS - score
+    const rs = FAIR.findNode('rs');
+    assertEqual(rs.unit, 'score', 'RS should have unit score');
+
+    // Productivity - dollars
+    const productivity = FAIR.findNode('productivity');
+    assertEqual(productivity.unit, 'dollars', 'Productivity should have unit dollars');
+
+    // SLEF - probability
+    const slef = FAIR.findNode('slef');
+    assertEqual(slef.unit, 'probability', 'SLEF should have unit probability');
+
+    // Reputation - dollars
+    const reputation = FAIR.findNode('reputation');
+    assertEqual(reputation.unit, 'dollars', 'Reputation should have unit dollars');
+  });
+
+  test('combine: risk = lef * lm', () => {
+    const result = FAIR.combine('risk', { lef: 5, lm: 100000 });
+    assertEqual(result, 500000, 'Risk should be LEF × LM');
+  });
+
+  test('combine: lef = tef * vuln', () => {
+    const result = FAIR.combine('lef', { tef: 10, vuln: 0.5 });
+    assertEqual(result, 5, 'LEF should be TEF × Vuln');
+  });
+
+  test('combine: tef = cf * poa', () => {
+    const result = FAIR.combine('tef', { cf: 20, poa: 0.5 });
+    assertEqual(result, 10, 'TEF should be CF × PoA');
+  });
+
+  test('combine: vuln = 1 if tcap > rs, else 0', () => {
+    const result1 = FAIR.combine('vuln', { tcap: 80, rs: 30 });
+    assertEqual(result1, 1, 'Vuln should be 1 when TCap > RS');
+
+    const result2 = FAIR.combine('vuln', { tcap: 30, rs: 80 });
+    assertEqual(result2, 0, 'Vuln should be 0 when TCap < RS');
+  });
+
+  test('combine: vuln equals case = 0', () => {
+    const result = FAIR.combine('vuln', { tcap: 50, rs: 50 });
+    assertEqual(result, 0, 'Vuln should be 0 when TCap = RS');
+  });
+
+  test('combine: lm = primary + secondary', () => {
+    const result = FAIR.combine('lm', { primary: 100000, secondary: 50000 });
+    assertEqual(result, 150000, 'LM should be Primary + Secondary');
+  });
+
+  test('combine: primary = sum of categories', () => {
+    const result = FAIR.combine('primary', {
+      productivity: 50000,
+      response: 30000,
+      replacement: 20000
+    });
+    assertEqual(result, 100000, 'Primary should be sum of Productivity + Response + Replacement');
+  });
+
+  test('combine: secondary = slef * slm', () => {
+    const result = FAIR.combine('secondary', { slef: 0.5, slm: 100000 });
+    assertEqual(result, 50000, 'Secondary should be SLEF × SLM');
+  });
+
+  test('combine: slm = sum of categories', () => {
+    const result = FAIR.combine('slm', {
+      reputation: 50000,
+      competitive: 30000,
+      fines: 20000
+    });
+    assertEqual(result, 100000, 'SLM should be sum of Reputation + Competitive Advantage + Fines');
+  });
+
+  test('All factors have default CI values (> 0, low <= high)', () => {
+    function checkNode(node) {
+      assert(node.defaultLow > 0, `${node.id} defaultLow should be > 0`);
+      assert(node.defaultHigh > 0, `${node.id} defaultHigh should be > 0`);
+      assert(node.defaultLow <= node.defaultHigh,
+        `${node.id} defaultLow should be <= defaultHigh`);
+      if (node.children) {
+        node.children.forEach(checkNode);
+      }
+    }
+    checkNode(FAIR.tree);
+  });
+
+  test('findNode returns correct node by id', () => {
+    const risk = FAIR.findNode('risk');
+    assertEqual(risk.id, 'risk', 'Should find risk node');
+
+    const cf = FAIR.findNode('cf');
+    assertEqual(cf.id, 'cf', 'Should find CF node');
+
+    const reputation = FAIR.findNode('reputation');
+    assertEqual(reputation.id, 'reputation', 'Should find Reputation node');
+  });
+
+  test('findNode returns null for unknown id', () => {
+    const result = FAIR.findNode('nonexistent');
+    assertEqual(result, null, 'Should return null for unknown id');
+  });
+
+  document.getElementById('output').textContent = results.join('\n');
+  const failed = results.filter(r => r.startsWith('❌')).length;
+  document.title = failed > 0 ? `FAIL (${failed})` : 'PASS';
+});
+</script>
+</body>
+</html>
