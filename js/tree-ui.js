@@ -419,8 +419,9 @@ export class FactorTreeUI {
       }
     });
 
-    // Make tree items focusable
+    // Make tree items focusable — but don't steal focus from inputs/buttons
     treeEl.addEventListener('click', (e) => {
+      if (e.target.closest('input, button')) return;
       const treeitem = e.target.closest('[role="treeitem"]');
       if (treeitem) {
         treeitem.focus();
