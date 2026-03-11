@@ -631,15 +631,16 @@ body {
 
 .responsive-toggle {
   display: none;
-  position: sticky;
+  position: fixed;
   inset-block-end: 0;
   inset-inline: 0;
   background: var(--bg-secondary);
-  border-block-start: 1px solid var(--border-color);
-  padding: 8px;
+  border-block-start: 2px solid var(--border-color);
+  padding: 8px 12px;
   gap: 8px;
   justify-content: stretch;
-  z-index: 10;
+  z-index: 100;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .toggle-btn {
@@ -714,13 +715,13 @@ body {
     inline-size: 100%;
     border-inline-end: none;
     border-block-end: 1px solid var(--border-color);
-    padding-block-end: 60px; /* space for fixed toggle bar */
+    padding-block-end: 80px; /* space for fixed toggle bar */
   }
 
   #results-panel {
     inline-size: 100%;
     display: none; /* hidden by default on mobile, toggled by JS */
-    padding-block-end: 60px;
+    padding-block-end: 80px;
   }
 
   #results-panel.mobile-visible {
