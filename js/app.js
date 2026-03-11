@@ -58,6 +58,7 @@ async function init() {
   document.getElementById('btn-copy-url').addEventListener('click', copyURL);
   document.getElementById('btn-export-png').addEventListener('click', () => exportChart('png'));
   document.getElementById('btn-export-svg').addEventListener('click', () => exportChart('svg'));
+  document.getElementById('btn-save-scenario').addEventListener('click', saveScenario);
   document.getElementById('btn-scenarios').addEventListener('click', toggleScenariosDropdown);
   document.getElementById('btn-new-scenario').addEventListener('click', newScenario);
 
@@ -90,7 +91,6 @@ function onInputChange() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     updateURLHash();
-    autoSaveScenario();
     runSimulation();
   }, 300);
 }
@@ -442,20 +442,21 @@ function updateURLHash() {
 }
 
 /**
- * Auto-save current scenario to localStorage
+ * Explicitly save current scenario to localStorage
  */
-function autoSaveScenario() {
+function saveScenario() {
   const state = getCurrentFullState();
-
   if (currentScenarioId) {
-    // Update existing scenario
     store.save(state, currentScenarioId);
   } else {
-    // Create new scenario
     currentScenarioId = store.save(state);
   }
-
   renderScenariosList();
+
+  // Brief visual feedback on the save button
+  const btn = document.getElementById('btn-save-scenario');
+  btn.textContent = 'Saved!';
+  setTimeout(() => { btn.textContent = 'Save'; }, 1500);
 }
 
 /**
