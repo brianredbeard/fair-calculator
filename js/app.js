@@ -287,38 +287,50 @@ function renderExceedanceCurve(sortedALE, stats) {
             width: 1
           },
           data: [
-            {
+            [{
               name: 'Median',
               xAxis: stats.median,
+              yAxis: 'max',
               label: {
-                position: 'insideStartTop',
-                formatter: () => `Median\n${i18n.formatCompactCurrency(stats.median)}`,
+                show: true,
+                position: 'start',
+                formatter: () => `Median: ${i18n.formatCompactCurrency(stats.median)}`,
                 fontSize: 11,
-                padding: [2, 4],
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                color: '#fff',
-                borderRadius: 2
+                padding: [3, 6],
+                backgroundColor: 'rgba(124, 232, 140, 0.85)',
+                color: '#000',
+                borderRadius: 3,
+                distance: 5
               },
-              lineStyle: {
-                color: getThemeColor('--accent-green', '#7ce88c')
-              }
-            },
-            {
+              lineStyle: { color: '#7ce88c' }
+            }, {
+              xAxis: stats.median,
+              yAxis: 'min',
+              label: { show: false },
+              lineStyle: { color: '#7ce88c' }
+            }],
+            [{
               name: '90th Percentile',
               xAxis: stats.p90,
+              yAxis: 0.5,
               label: {
-                position: 'insideEndTop',
-                formatter: () => `90th Percentile\n${i18n.formatCompactCurrency(stats.p90)}`,
+                show: true,
+                position: 'start',
+                formatter: () => `90th: ${i18n.formatCompactCurrency(stats.p90)}`,
                 fontSize: 11,
-                padding: [2, 4],
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                padding: [3, 6],
+                backgroundColor: 'rgba(232, 124, 124, 0.85)',
                 color: '#fff',
-                borderRadius: 2
+                borderRadius: 3,
+                distance: 5
               },
-              lineStyle: {
-                color: getThemeColor('--accent-red', '#e87c7c')
-              }
-            }
+              lineStyle: { color: '#e87c7c' }
+            }, {
+              xAxis: stats.p90,
+              yAxis: 'min',
+              label: { show: false },
+              lineStyle: { color: '#e87c7c' }
+            }]
           ]
         }
       }
