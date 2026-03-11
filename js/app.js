@@ -361,11 +361,11 @@ function renderCategoryBreakdown(breakdown) {
       color: getThemeColor('--color-text', '#e0e0e0')
     },
     grid: {
-      left: '180',
-      right: '40',
-      top: '10',
-      bottom: '30',
-      containLabel: false
+      left: 20,
+      right: 30,
+      top: 10,
+      bottom: 30,
+      containLabel: true
     },
     xAxis: {
       type: 'value',
@@ -383,9 +383,7 @@ function renderCategoryBreakdown(breakdown) {
       type: 'category',
       data: chartData.map(d => d.name),
       axisLabel: {
-        fontSize: 12,
-        width: 160,
-        overflow: 'truncate'
+        fontSize: 12
       },
       axisLine: {
         lineStyle: {
