@@ -444,7 +444,7 @@ function samplePERT(rng, min, mode, max, lambda = 4) {
 const PROBABILITY_FACTORS = ['poa', 'vuln', 'slef'];
 const LOSS_CATEGORIES = [
   'productivity', 'response', 'replacement', 'reputation',
-  'competitive_advantage', 'fines', 'primary', 'secondary', 'slm'
+  'competitive', 'fines', 'primary', 'secondary', 'slm', 'lm'
 ];
 
 function isProbabilityFactor(factorId) {
@@ -538,6 +538,13 @@ function resolveFactor(factorId, factorState, rng, categoryAccum, settings) {
   }
 
   const combinedValue = FAIR.combine(factorId, childValues);
+
+  // For the risk node, annualize category breakdown by multiplying by this iteration's LEF
+  if (factorId === 'risk' && categoryAccum && childValues.lef !== undefined) {
+    for (const cat of Object.keys(categoryAccum)) {
+      categoryAccum[cat] *= childValues.lef;
+    }
+  }
 
   // If this expanded factor is itself a loss category, track the combined value
   if (isLossCategory(factorId) && categoryAccum) {

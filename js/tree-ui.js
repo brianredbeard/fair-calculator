@@ -7,10 +7,11 @@
 import { FAIR } from './fair-model.js';
 
 export class FactorTreeUI {
-  constructor(container, modelTree, onChange) {
+  constructor(container, modelTree, onChange, i18n) {
     this.container = container;
     this.modelTree = modelTree;
     this.onChange = onChange;
+    this.i18n = i18n;
     this.inputMode = 'ci'; // 'ci' or 'pert'
 
     // Initialize state with Risk expanded by default
@@ -72,11 +73,22 @@ export class FactorTreeUI {
     }
 
     if (factorState.expanded) {
-      // Collapse: roll up children into parent CI, stash children for re-expand
+      // Collapse: roll up children into parent, stash children for re-expand
       factorState._remembered = JSON.parse(JSON.stringify(factorState.children));
       const rolledUp = this._rollUpChildren(factorId, factorState.children, modelNode);
-      factorState.low = rolledUp.low;
-      factorState.high = rolledUp.high;
+      if (rolledUp.min !== undefined) {
+        factorState.min = rolledUp.min;
+        factorState.mode = rolledUp.mode;
+        factorState.max = rolledUp.max;
+        delete factorState.low;
+        delete factorState.high;
+      } else {
+        factorState.low = rolledUp.low;
+        factorState.high = rolledUp.high;
+        delete factorState.min;
+        delete factorState.mode;
+        delete factorState.max;
+      }
       factorState.expanded = false;
       delete factorState.children;
     } else if (factorState._remembered) {
@@ -86,12 +98,18 @@ export class FactorTreeUI {
       delete factorState._remembered;
       delete factorState.low;
       delete factorState.high;
+      delete factorState.min;
+      delete factorState.mode;
+      delete factorState.max;
     } else {
       // First expand: proportional split of parent values
       factorState.expanded = true;
       factorState.children = this._proportionalSplit(factorState, modelNode);
       delete factorState.low;
       delete factorState.high;
+      delete factorState.min;
+      delete factorState.mode;
+      delete factorState.max;
     }
 
     // Re-render
@@ -414,8 +432,21 @@ export class FactorTreeUI {
     // Now collapse this node
     factorState._remembered = JSON.parse(JSON.stringify(factorState.children));
     const rolledUp = this._rollUpChildren(modelNode.id, factorState.children, modelNode);
-    factorState.low = rolledUp.low;
-    factorState.high = rolledUp.high;
+    if (rolledUp.min !== undefined) {
+      // PERT mode roll-up
+      factorState.min = rolledUp.min;
+      factorState.mode = rolledUp.mode;
+      factorState.max = rolledUp.max;
+      delete factorState.low;
+      delete factorState.high;
+    } else {
+      // CI mode roll-up
+      factorState.low = rolledUp.low;
+      factorState.high = rolledUp.high;
+      delete factorState.min;
+      delete factorState.mode;
+      delete factorState.max;
+    }
     factorState.expanded = false;
     delete factorState.children;
   }
@@ -445,9 +476,14 @@ export class FactorTreeUI {
     const allExpanded = this._hasExpandedFactors();
     const toggleAllBtn = document.createElement('button');
     toggleAllBtn.className = 'btn-small btn-expand-all';
-    toggleAllBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
-    toggleAllBtn.setAttribute('aria-label', allExpanded ? 'Collapse all factors' : 'Expand all factors (Stage 2: full decomposition)');
+    toggleAllBtn.textContent = allExpanded ? (this.i18n ? this.i18n.t('input.collapse_all') : 'Collapse All') : (this.i18n ? this.i18n.t('input.expand_all') : 'Expand All');
+    toggleAllBtn.setAttribute('aria-label', allExpanded ? (this.i18n ? this.i18n.t('input.collapse_all_tooltip') : 'Collapse all factors') : (this.i18n ? this.i18n.t('input.expand_all_tooltip') : 'Expand all factors (Stage 2: full decomposition)'));
+    if (this._currentTutorialStep) {
+      toggleAllBtn.disabled = true;
+      toggleAllBtn.title = 'Disabled during tutorial';
+    }
     toggleAllBtn.addEventListener('click', () => {
+      if (this._currentTutorialStep) return;
       if (this._hasExpandedFactors()) {
         this.collapseAll();
       } else {
@@ -513,14 +549,18 @@ export class FactorTreeUI {
     // Factor label with tooltip
     const labelEl = document.createElement('span');
     labelEl.className = 'factor-label';
-    labelEl.textContent = modelNode.label;
-    labelEl.setAttribute('title', modelNode.tooltip);
+    const labelKey = `factor.${factorId}.label`;
+    const tooltipKey = `factor.${factorId}.tooltip`;
+    labelEl.textContent = this.i18n ? this.i18n.t(labelKey) : modelNode.label;
+    labelEl.setAttribute('title', this.i18n ? this.i18n.t(tooltipKey) : modelNode.tooltip);
     headerEl.appendChild(labelEl);
 
     // Unit indicator
     const unitEl = document.createElement('span');
     unitEl.className = 'factor-unit';
-    unitEl.textContent = `(${modelNode.unit})`;
+    const unitKey = modelNode.unit.replace('/', '_');
+    const unitLabel = this.i18n ? this.i18n.t(`input.unit_labels.${unitKey}`) : modelNode.unit;
+    unitEl.textContent = `(${unitLabel})`;
     headerEl.appendChild(unitEl);
 
     itemEl.appendChild(headerEl);
@@ -530,7 +570,9 @@ export class FactorTreeUI {
       const descEl = document.createElement('p');
       descEl.className = 'factor-description';
 
-      const textNode = document.createTextNode(modelNode.description);
+      const descKey = `factor.${factorId}.description`;
+      const description = this.i18n ? this.i18n.t(descKey) : modelNode.description;
+      const textNode = document.createTextNode(description);
       descEl.appendChild(textNode);
 
       if (modelNode.references && modelNode.references.length > 0) {
@@ -593,7 +635,7 @@ export class FactorTreeUI {
     // Low input
     const lowLabelEl = document.createElement('span');
     lowLabelEl.className = 'ci-label';
-    lowLabelEl.textContent = 'Low:';
+    lowLabelEl.textContent = this.i18n ? this.i18n.t('input.low') : 'Low:';
     rowEl.appendChild(lowLabelEl);
 
     const lowInputEl = document.createElement('input');
@@ -610,7 +652,7 @@ export class FactorTreeUI {
     // High input
     const highLabelEl = document.createElement('span');
     highLabelEl.className = 'ci-label';
-    highLabelEl.textContent = 'High:';
+    highLabelEl.textContent = this.i18n ? this.i18n.t('input.high') : 'High:';
     rowEl.appendChild(highLabelEl);
 
     const highInputEl = document.createElement('input');
@@ -637,7 +679,7 @@ export class FactorTreeUI {
     // Min input
     const minLabelEl = document.createElement('span');
     minLabelEl.className = 'pert-label';
-    minLabelEl.textContent = 'Min:';
+    minLabelEl.textContent = this.i18n ? this.i18n.t('input.min') : 'Min:';
     rowEl.appendChild(minLabelEl);
 
     const minInputEl = document.createElement('input');
@@ -654,7 +696,7 @@ export class FactorTreeUI {
     // Mode input
     const modeLabelEl = document.createElement('span');
     modeLabelEl.className = 'pert-label';
-    modeLabelEl.textContent = 'Mode:';
+    modeLabelEl.textContent = this.i18n ? this.i18n.t('input.mode') : 'Mode:';
     rowEl.appendChild(modeLabelEl);
 
     const modeInputEl = document.createElement('input');
@@ -671,7 +713,7 @@ export class FactorTreeUI {
     // Max input
     const maxLabelEl = document.createElement('span');
     maxLabelEl.className = 'pert-label';
-    maxLabelEl.textContent = 'Max:';
+    maxLabelEl.textContent = this.i18n ? this.i18n.t('input.max') : 'Max:';
     rowEl.appendChild(maxLabelEl);
 
     const maxInputEl = document.createElement('input');
@@ -870,5 +912,83 @@ export class FactorTreeUI {
         treeitem.focus();
       }
     });
+
+    // Re-apply tutorial UI if active (prevents callout destruction on re-render)
+    if (this._currentTutorialStep) {
+      this._reapplyTutorialUI();
+    }
+  }
+
+  /**
+   * Re-apply tutorial UI after tree re-render
+   * @private
+   */
+  async _reapplyTutorialUI() {
+    if (!this._currentTutorialStep) return;
+    await this.setTutorialUI(this._currentTutorialStep, this._tutorialI18n);
+  }
+
+  /**
+   * Update UI for tutorial mode
+   * @param {Object} stepData - Current tutorial step
+   * @param {Object} i18n - I18n instance
+   */
+  async setTutorialUI(stepData, i18n) {
+    const { renderCallout, renderResultsCallout, highlightFactor } = await import('./tutorial-ui.js');
+
+    // Store for re-rendering after tree updates
+    this._currentTutorialStep = stepData;
+    this._tutorialI18n = i18n;
+
+    // Disable expand/collapse all during tutorial
+    const expandAllBtn = this.container.querySelector('.btn-expand-all');
+    if (expandAllBtn) {
+      expandAllBtn.disabled = true;
+      expandAllBtn.title = 'Disabled during tutorial';
+    }
+
+    // Highlight factor if specified
+    if (stepData.factorId) {
+      highlightFactor(stepData.factorId);
+    }
+
+    // Render callout and scroll it into view
+    if (stepData.factorId && stepData.factorId !== 'results') {
+      const factorEl = this.container.querySelector(`[data-factor-id="${stepData.factorId}"]`);
+      if (factorEl) {
+        renderCallout(factorEl, stepData, i18n);
+        const callout = factorEl.querySelector('.tutorial-callout');
+        if (callout) {
+          requestAnimationFrame(() => callout.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        }
+      }
+    } else if (stepData.factorId === 'results') {
+      const resultsPanel = document.getElementById('results-panel');
+      if (resultsPanel) {
+        renderResultsCallout(resultsPanel, stepData, i18n);
+        const callout = resultsPanel.querySelector('.tutorial-callout');
+        if (callout) {
+          requestAnimationFrame(() => callout.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        }
+      }
+    }
+  }
+
+  /**
+   * Clear tutorial UI elements
+   */
+  async clearTutorialUI() {
+    this._currentTutorialStep = null;
+    this._tutorialI18n = null;
+
+    // Re-enable expand/collapse all
+    const expandAllBtn = this.container.querySelector('.btn-expand-all');
+    if (expandAllBtn) {
+      expandAllBtn.disabled = false;
+      expandAllBtn.title = '';
+    }
+
+    const { clearAllTutorialUI } = await import('./tutorial-ui.js');
+    clearAllTutorialUI();
   }
 }

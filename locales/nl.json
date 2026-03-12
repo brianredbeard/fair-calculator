@@ -1,0 +1,229 @@
+{
+  "skip_nav": "Overslaan naar resultaten",
+  "app": {
+    "title": "FAIR Calculator",
+    "subtitle": "Factoranalyse van Informatierisico"
+  },
+  "topbar": {
+    "copy_url": "URL Kopiëren",
+    "scenarios": "Scenario's",
+    "settings": "Instellingen",
+    "report": "Rapport genereren",
+    "iterations": "Iteraties:",
+    "save": "Opslaan",
+    "new_scenario": "Naamloos scenario",
+    "theme": {
+      "light": "Licht",
+      "dark": "Donker",
+      "auto": "Auto"
+    }
+  },
+  "input": {
+    "ci_min": "90% BI Min",
+    "ci_max": "90% BI Max",
+    "low": "Laag:",
+    "high": "Hoog:",
+    "min": "Min:",
+    "mode": "Modus:",
+    "max": "Max:",
+    "validation": {
+      "required": "Dit veld is verplicht",
+      "min_less_than_max": "Minimum moet kleiner zijn dan het maximum",
+      "positive_number": "Moet een positief getal zijn"
+    },
+    "unit_labels": {
+      "count": "Aantal",
+      "days": "Dagen",
+      "percent": "Procent",
+      "dollars": "Dollar",
+      "probability": "Kans",
+      "events_year": "Gebeurtenissen/Jaar"
+    },
+    "expand": "Uitvouwen",
+    "collapse": "Samenvouwen",
+    "expand_all": "Alles uitvouwen",
+    "collapse_all": "Alles samenvouwen",
+    "stage_1": "Fase 1 (Directe Schatting)",
+    "stage_2": "Fase 2 (Gedetailleerde Schatting)",
+    "expand_all_tooltip": "Alle factoren uitvouwen (Fase 2: volledige uitsplitsing)",
+    "collapse_all_tooltip": "Alle factoren samenvouwen"
+  },
+  "results": {
+    "chart_title": "Verliesoverschrijdingscurve",
+    "stats_title": "Samenvattende statistieken",
+    "breakdown_title": "Verdeling per verliescategorie",
+    "log_scale": "Log. schaal",
+    "linear_scale": "Lineair",
+    "simulating": "Simuleren...",
+    "error": "Fout tijdens de simulatie",
+    "axis": {
+      "x": "Verwacht Jaarlijks Verlies ($)",
+      "y": "Kans"
+    },
+    "stats": {
+      "mean": "Gemiddelde",
+      "median": "Mediaan",
+      "p90": "90e percentiel",
+      "min": "Min",
+      "max": "Max",
+      "std_dev": "Std Afw",
+      "percentile_5": "5e percentiel",
+      "percentile_95": "95e percentiel"
+    }
+  },
+  "export": {
+    "png": "Exporteren als PNG",
+    "svg": "Exporteren als SVG"
+  },
+  "scenarios": {
+    "saved": "Scenario opgeslagen",
+    "new": "Nieuw scenario",
+    "delete": "Verwijderen",
+    "last_modified": "Laatst gewijzigd",
+    "url_copied": "URL gekopieerd naar klembord",
+    "empty": "Geen opgeslagen scenario's",
+    "load_examples": "Voorbeelden laden",
+    "clear_examples": "Voorbeelden wissen",
+    "export_json": "Export JSON",
+    "import_json": "Import JSON"
+  },
+  "responsive": {
+    "inputs_label": "Invoer",
+    "results_label": "Resultaten"
+  },
+  "tutorial": {
+    "prev": "Vorige stap",
+    "next": "Volgende stap",
+    "exit": "Tutorial verlaten",
+    "exit_confirm": "Tutorial verlaten? Je voortgang gaat verloren.",
+    "chapter": "Hoofdstuk {n}",
+    "scenario_header": "In dit scenario",
+    "numbers_header": "Waarom deze cijfers?",
+    "try_it_header": "Probeer het zelf",
+    "reset_values": "Waarden herstellen",
+    "aria_label": "Tutorial navigatie",
+    "callout_label": "Tutorial begeleiding",
+    "resumed": "Tutorial hervat"
+  },
+  "report": {
+    "title": "FAIR Risicoanalyserapport",
+    "scenario": "Scenario",
+    "date": "Datum",
+    "analyst": "Analist: [UW NAAM]",
+    "input_mode": "Invoermodus",
+    "mode_ci": "2-punts Betrouwbaarheidsinterval",
+    "mode_pert": "3-punts PERT-schatting",
+    "iterations": "Iteraties",
+    "exec_summary": "MANAGEMENTSAMENVATTING",
+    "exec_summary_prompt": "[Geef een kort overzicht van het risicoscenario, de belangrijkste bevindingen en aanbevelingen.]",
+    "factor_analysis": "FACTORANALYSE",
+    "rationale_prompt": "[REDEN: Leg uit waarom deze waarden zijn gekozen. Bijv. \"...\"]",
+    "and": "en",
+    "estimated_via": "Geschat via ontleding in",
+    "no_values": "[Geen waarden ingesteld]",
+    "sim_results": "SIMULATIERESULTATEN",
+    "methodology": "METHODOLOGIE",
+    "method_desc_1": "Deze analyse gebruikt het Factor Analysis of Information Risk (FAIR) raamwerk met Monte Carlo-simulatie",
+    "method_desc_2": "gebruikmakend van",
+    "method_pert": "Beta-PERT-verdelingen.",
+    "method_ci": "uniforme verdelingen binnen betrouwbaarheidsintervallen.",
+    "references": "Referenties:"
+  },
+  "factor": {
+    "risk": {
+      "label": "Risico",
+      "tooltip": "Risico is de waarschijnlijke frequentie en de waarschijnlijke omvang van toekomstig verlies",
+      "description": "Risico (Verwacht Jaarlijks Verlies). De waarschijnlijke frequentie en omvang van toekomstige verliezen, uitgedrukt in dollars per jaar. Dit is de hoogste output: ALE = Verliesgebeurtenis Frequentie × Verliesomvang. Voer het 90% betrouwbaarheidsinterval in voor uw totale geschatte jaarlijkse verlies (Fase 1: directe schatting), of vouw uit om te splitsen in LEF en LM (Fase 2)."
+    },
+    "lef": {
+      "label": "Verliesgebeurtenis Frequentie (LEF)",
+      "tooltip": "Hoe vaak doen verliesgebeurtenissen zich voor?",
+      "description": "Verliesgebeurtenis Frequentie (LEF). Het waarschijnlijke aantal keren dat een verliesgebeurtenis zal optreden binnen een bepaald tijdsbestek (meestal een jaar). Voer het 90% BI in voor het aantal verliesgebeurtenissen dat u per jaar verwacht, of vouw uit naar Dreigingsgebeurtenis Frequentie en Kwetsbaarheid voor een meer gedetailleerde schatting."
+    },
+    "tef": {
+      "label": "Dreigingsgebeurtenis Frequentie (TEF)",
+      "tooltip": "Hoe vaak doen dreigingsgebeurtenissen zich voor?",
+      "description": "Dreigingsgebeurtenis Frequentie (TEF). Het waarschijnlijke aantal keren dat een dreigingsactor zal proberen schade toe te brengen aan een bedrijfsmiddel binnen een bepaald tijdsbestek. Voer het 90% BI in voor dreigingsgebeurtenissen (pogingen) per jaar. Vouw uit naar Contactfrequentie en Actiekans voor verdere detaillering."
+    },
+    "cf": {
+      "label": "Contactfrequentie (CF)",
+      "tooltip": "Hoe vaak komt de dreiging in contact met het bedrijfsmiddel?",
+      "description": "Contactfrequentie (CF). Het waarschijnlijke aantal keren dat een dreigingsactor in contact komt met een bedrijfsmiddel. Dit omvat elke ontmoeting — scannen, verkenning, fysieke toegangspogingen, phishing — ongeacht of de actor tot actie overgaat. Voer het 90% BI in voor contactgebeurtenissen per jaar."
+    },
+    "poa": {
+      "label": "Actiekans (POA)",
+      "tooltip": "Wat is de kans dat de dreiging in actie komt bij contact?",
+      "description": "Actiekans (PoA). De waarschijnlijkheid dat een dreigingsactor zal handelen nadat contact is gemaakt. Dit weerspiegelt de motivatie, risicobereidheid en waargenomen waarde van het doelwit. Voer een kans in tussen 0 en 1 (bijv. 0,3 betekent 30% kans op actie per contact)."
+    },
+    "vuln": {
+      "label": "Kwetsbaarheid (VULN)",
+      "tooltip": "Wat is de kans dat het bedrijfsmiddel wordt gecompromitteerd bij contact?",
+      "description": "Kwetsbaarheid (Vuln). De waarschijnlijkheid dat een dreigingsgebeurtenis resulteert in verlies. Geef een kans op tussen 0 en 1. Indien uitgevouwen naar Dreigingscapaciteit en Weerstandsterkte, wordt kwetsbaarheid berekend als een binaire vergelijking: indien TCap > RS, slaagt de dreiging (Vuln = 1); anders houdt de beheersing stand (Vuln = 0)."
+    },
+    "tcap": {
+      "label": "Dreigingscapaciteit (TCAP)",
+      "tooltip": "Wat is het vermogen van de dreiging om de beveiligingsmaatregelen te omzeilen?",
+      "description": "Dreigingscapaciteit (TCap). Het waarschijnlijke niveau van kracht of vaardigheid van een dreigingsactor, op een schaal van 0-100. Overweeg technische verfijning, middelen en tools. Gebruik dezelfde schaal als voor Weerstandsterkte."
+    },
+    "rs": {
+      "label": "Weerstandsterkte (RS)",
+      "tooltip": "Hoe goed zijn uw maatregelen bestand tegen dreigingen?",
+      "description": "Weerstandsterkte (RS). Het waarschijnlijke niveau van weerstand dat een beheersmaatregel kan bieden tegen een dreiging, op een schaal van 0-100. Overweeg volwassenheid, dekking en effectiviteit. Gebruik dezelfde schaal als voor Dreigingscapaciteit."
+    },
+    "lm": {
+      "label": "Verliesomvang (LM)",
+      "tooltip": "Wat is de financiële impact wanneer een verliesgebeurtenis optreedt?",
+      "description": "Verliesomvang (LM). De waarschijnlijke omvang in dollars van het verlies bij één enkele verliesgebeurtenis. Voer het 90% BI in dollars in (bijv. 50K, 1.5M), of vouw uit naar Primaire en Secundaire verliescategorieën."
+    },
+    "primary": {
+      "label": "Primair verlies",
+      "tooltip": "Directe financiële verliezen als gevolg van het incident",
+      "description": "Primair verlies. Directe verliezen als gevolg van de gebeurtenis zelf — kosten die de organisatie maakt als direct effect. Splits uit in Productiviteit, Respons en Vervanging."
+    },
+    "productivity": {
+      "label": "Productiviteitsverlies",
+      "tooltip": "Kosten als gevolg van uitvaltijd en verminderde productiviteit",
+      "description": "Productiviteitsverlies. Verloren inkomsten of output door de verstoring. Overweeg: hoe lang liggen systemen plat? Wat is de omzet per uur? Hoeveel medewerkers zijn getroffen?"
+    },
+    "response": {
+      "label": "Respons en herstel",
+      "tooltip": "Kosten om op het incident te reageren en ervan te herstellen",
+      "description": "Responskosten. De kosten van onderzoek, inperking en herstel. Inclusief: uren van het incident response team, forensisch onderzoek, externe consultants en communicatie."
+    },
+    "replacement": {
+      "label": "Vervangingskosten",
+      "tooltip": "Kosten om beschadigde bedrijfsmiddelen te vervangen of repareren",
+      "description": "Vervangingskosten. De kosten om gecompromitteerde assets te repareren of vervangen. Inclusief hardware, softwarelicenties en dataherstel."
+    },
+    "secondary": {
+      "label": "Secundair verlies",
+      "tooltip": "Indirecte financiële verliezen",
+      "description": "Secundair verlies. Verliezen als gevolg van reacties van externe belanghebbenden (klanten, toezichthouders, partners). Dit is vaak de grootste component. Splits uit in SLEF (kans) en SLM (omvang)."
+    },
+    "slef": {
+      "label": "Secundaire verliesgebeurtenis frequentie (SLEF)",
+      "tooltip": "Hoe vaak komen secundaire verliesgebeurtenissen voor ten opzichte van primaire?",
+      "description": "Secundaire verliesgebeurtenis frequentie (SLEF). De kans dat een primaire verliesgebeurtenis reacties van secundaire belanghebbenden uitlokt. Niet alle incidenten worden openbaar."
+    },
+    "slm": {
+      "label": "Secundaire verliesomvang (SLM)",
+      "tooltip": "Wat is de financiële impact van de secundaire verliezen?",
+      "description": "Secundaire verliesomvang (SLM). De waarschijnlijke omvang in dollars van secundaire verliezen wanneer deze optreden. Splits uit in Reputatie, Concurrentienadeel en Boetes."
+    },
+    "reputation": {
+      "label": "Reputatieschade",
+      "tooltip": "Financiële impact van merkschade en het verlies van klantvertrouwen",
+      "description": "Reputatieschade. Dollar-impact van verloren klantvertrouwen en merkwaarde. Overweeg klantverloop en kosten om klanten terug te winnen."
+    },
+    "competitive": {
+      "label": "Concurrentienadeel",
+      "tooltip": "Verlies van marktaandeel en concurrentiepositie",
+      "description": "Verlies van concurrentievoordeel. Dollar-impact van het verliezen van bedrijfseigen informatie of marktpositie aan concurrenten."
+    },
+    "fines": {
+      "label": "Boetes en vonnissen",
+      "tooltip": "Regelgevende boetes en juridische straffen",
+      "description": "Boetes en vonnissen. Boetes van toezichthouders, schikkingen en juridische kosten. Overweeg AVG/GDPR, boetes per record en contractuele boetes."
+    }
+  }
+}

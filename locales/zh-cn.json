@@ -1,0 +1,229 @@
+{
+  "skip_nav": "跳过导航",
+  "app": {
+    "title": "FAIR 计算器",
+    "subtitle": "信息风险因素分析"
+  },
+  "topbar": {
+    "copy_url": "复制 URL",
+    "scenarios": "场景",
+    "settings": "设置",
+    "report": "生成报告",
+    "iterations": "模拟次数:",
+    "save": "保存",
+    "new_scenario": "未命名场景",
+    "theme": {
+      "light": "浅色",
+      "dark": "深色",
+      "auto": "自动"
+    }
+  },
+  "input": {
+    "ci_min": "90% 置信区间下限",
+    "ci_max": "90% 置信区间上限",
+    "low": "低:",
+    "high": "高:",
+    "min": "最小:",
+    "mode": "最可能:",
+    "max": "最大:",
+    "validation": {
+      "required": "此字段为必填项",
+      "min_less_than_max": "最小值必须小于最大值",
+      "positive_number": "必须是正数"
+    },
+    "unit_labels": {
+      "count": "次数",
+      "days": "天数",
+      "percent": "百分比",
+      "dollars": "美元",
+      "probability": "概率",
+      "events_year": "次/年"
+    },
+    "expand": "展开",
+    "collapse": "折叠",
+    "expand_all": "展开全部",
+    "collapse_all": "折叠全部",
+    "stage_1": "阶段 1 (直接估算)",
+    "stage_2": "阶段 2 (分解估算)",
+    "expand_all_tooltip": "展开所有因素 (阶段 2: 完全分解)",
+    "collapse_all_tooltip": "折叠所有因素"
+  },
+  "results": {
+    "chart_title": "损失超过曲线",
+    "stats_title": "摘要统计",
+    "breakdown_title": "损失类别明细",
+    "log_scale": "对数刻度",
+    "linear_scale": "线性",
+    "simulating": "模拟中...",
+    "error": "模拟出错",
+    "axis": {
+      "x": "年度风险暴露 ($)",
+      "y": "超过概率"
+    },
+    "stats": {
+      "mean": "平均值",
+      "median": "中位数",
+      "p90": "第 90 百分位数",
+      "min": "最小值",
+      "max": "最大值",
+      "std_dev": "标准差",
+      "percentile_5": "第 5 百分位数",
+      "percentile_95": "第 95 百分位数"
+    }
+  },
+  "export": {
+    "png": "导出 PNG",
+    "svg": "导出 SVG"
+  },
+  "scenarios": {
+    "saved": "场景已保存",
+    "new": "新建场景",
+    "delete": "删除",
+    "last_modified": "最后修改",
+    "url_copied": "链接已复制",
+    "empty": "无保存的场景",
+    "load_examples": "加载示例",
+    "clear_examples": "清除示例",
+    "export_json": "导出 JSON",
+    "import_json": "导入 JSON"
+  },
+  "responsive": {
+    "inputs_label": "输入",
+    "results_label": "结果"
+  },
+  "tutorial": {
+    "prev": "上一步",
+    "next": "下一步",
+    "exit": "退出教程",
+    "exit_confirm": "确定退出教程吗？进度将丢失。",
+    "chapter": "第 {n} 章",
+    "scenario_header": "在此场景中",
+    "numbers_header": "为什么是这些数字？",
+    "try_it_header": "动手试一试",
+    "reset_values": "重置数值",
+    "aria_label": "教程导航",
+    "callout_label": "教程指导",
+    "resumed": "教程已恢复"
+  },
+  "report": {
+    "title": "FAIR 风险分析报告",
+    "scenario": "场景",
+    "date": "日期",
+    "analyst": "分析师: [您的名字]",
+    "input_mode": "输入模式",
+    "mode_ci": "2点置信区间",
+    "mode_pert": "3点PERT估算",
+    "iterations": "模拟次数",
+    "exec_summary": "执行摘要",
+    "exec_summary_prompt": "[简要概述风险场景、主要发现和建议。]",
+    "factor_analysis": "因素分析",
+    "rationale_prompt": "[依据: 解释为何选择这些值。例如: \"...\"]",
+    "and": "和",
+    "estimated_via": "通过分解估算为",
+    "no_values": "[未设置值]",
+    "sim_results": "模拟结果",
+    "methodology": "方法论",
+    "method_desc_1": "本分析采用信息风险因素分析 (FAIR) 框架及蒙特卡洛模拟，并使用",
+    "method_desc_2": "分布：",
+    "method_pert": "Beta-PERT分布。",
+    "method_ci": "置信区间内的均匀分布。",
+    "references": "参考文献:"
+  },
+  "factor": {
+    "risk": {
+      "label": "风险",
+      "tooltip": "风险是未来损失的可能频率和可能规模",
+      "description": "风险 (年度预期损失)。未来损失的可能频率和规模，以年度美元数字表示。这是顶层输出结果：ALE = 损失事件频率 × 损失规模。输入您对总体年度估算损失的 90% 置信区间（阶段 1），或展开以分解为 LEF、LM 及其子因素（阶段 2）。"
+    },
+    "lef": {
+      "label": "损失事件频率 (LEF)",
+      "tooltip": "损失事件发生的频率有多高？",
+      "description": "损失事件频率 (LEF)。损失事件在给定时间内（通常为一年）可能发生的次数。输入您预计每年发生多少次损失事件的 90% 置信区间，或分解为威胁事件频率和脆弱性以进行更精细的估算。"
+    },
+    "tef": {
+      "label": "威胁事件频率 (TEF)",
+      "tooltip": "威胁事件发生的频率有多高？",
+      "description": "威胁事件频率 (TEF)。威胁代理在给定时间内对资产采取行动（无论成功与否）的可能次数。输入您预计每年发生多少次威胁事件（尝试次数，而非成功次数）的 90% 置信区间。可进一步分解为接触频率和行动概率。"
+    },
+    "cf": {
+      "label": "接触频率 (CF)",
+      "tooltip": "威胁接触资产的频率有多高？",
+      "description": "接触频率 (CF)。威胁代理在给定时间内与资产发生接触的可能次数。这包括任何接触——扫描、侦察、物理访问尝试、钓鱼邮件——无论威胁代理是否决定采取行动。"
+    },
+    "poa": {
+      "label": "行动概率 (POA)",
+      "tooltip": "当发生接触时，威胁采取行动的概率是多少？",
+      "description": "行动概率 (PoA)。威胁代理在发生接触后采取行动的概率。这体现了威胁代理的动机、风险偏好和目标的感知价值。请输入 0 到 1 之间的概率（例如 0.3 表示 30% 的行动机会）。"
+    },
+    "vuln": {
+      "label": "脆弱性 (VULN)",
+      "tooltip": "在接触的情况下，资产被破坏的概率是多少？",
+      "description": "脆弱性 (Vuln)。威胁事件导致损失的概率。直接输入时，请提供 0 到 1 之间的概率。当分解为威胁能力和抵抗强度时，脆弱性是根据每次模拟迭代的二元比较计算的：如果 TCap > RS，则威胁成功（Vuln = 1）；否则防御有效（Vuln = 0）。"
+    },
+    "tcap": {
+      "label": "威胁能力 (TCAP)",
+      "tooltip": "威胁克服安全控制措施的能力是什么？",
+      "description": "威胁能力 (TCap)。威胁代理对资产施加力量或技能的可能水平，分值为 0-100。考虑威胁者的技术复杂程度、资源和工具。脚本小子可能在 10-30 之间；国家级代理可能在 70-95 之间。"
+    },
+    "rs": {
+      "label": "抵抗强度 (RS)",
+      "tooltip": "您的控制措施抵抗威胁的效果如何？",
+      "description": "抵抗强度 (RS)。控制措施对威胁可能提供的抵抗水平，分值为 0-100。考虑控制措施的成熟度、覆盖范围和有效性。基本防火墙可能在 20-40 之间；具有监控和补丁管理的深度防御可能在 60-85 之间。"
+    },
+    "lm": {
+      "label": "损失规模 (LM)",
+      "tooltip": "损失事件发生时的财务影响是什么？",
+      "description": "损失规模 (LM)。单次损失事件可能产生的美元规模。输入美元的 90% 置信区间（支持简写：50K, 1.5M, 2B），或分解为直接损失和间接损失类别。"
+    },
+    "primary": {
+      "label": "直接损失",
+      "tooltip": "事件造成的直接财务损失",
+      "description": "直接损失。由事件本身产生的直接损失——组织作为一级效应而产生的成本。可分解为生产力、响应和重置成本。"
+    },
+    "productivity": {
+      "label": "生产力损失",
+      "tooltip": "由于停机和生产力降低造成的成本",
+      "description": "生产力损失。由于业务中断而损失的收入或产出。考虑：系统将停机多久？每小时产生多少收入？有多少员工受到影响以及成本是多少？"
+    },
+    "response": {
+      "label": "响应成本",
+      "tooltip": "响应和从事件中恢复的成本",
+      "description": "响应成本。调查、遏制和修复事件的成本。包括：事件响应团队工时、取证分析、外部顾问、法律顾问、危机公关和客户通知。"
+    },
+    "replacement": {
+      "label": "重置成本",
+      "tooltip": "更换或修复受损资产的成本",
+      "description": "重置成本。修复或更换受损资产的成本。包括：硬件更换、软件重新授权、数据恢复和基础设施重建。"
+    },
+    "secondary": {
+      "label": "间接损失",
+      "tooltip": "间接的财务损失",
+      "description": "间接损失。由外部利益相关者（客户、监管机构、合作伙伴）对直接事件的反应而产生的损失。这通常是损失的最大组成部分。可分解为 SLEF（发生概率）和 SLM（发生规模）。"
+    },
+    "slef": {
+      "label": "间接损失事件频率 (SLEF)",
+      "tooltip": "相对于直接损失，间接损失事件发生的频率有多高？",
+      "description": "间接损失事件频率 (SLEF)。直接损失事件引发间接利益相关者反应的概率。并非所有事件都会公开或引发监管行动。"
+    },
+    "slm": {
+      "label": "间接损失规模 (SLM)",
+      "tooltip": "间接损失的财务影响是什么？",
+      "description": "间接损失规模 (SLM)。间接损失发生时的可能美元规模。可分解为声誉、竞争优势以及罚款和判决。"
+    },
+    "reputation": {
+      "label": "声誉损害",
+      "tooltip": "品牌损害和客户信任流失造成的财务影响",
+      "description": "声誉损害。客户信任和品牌价值损失产生的美元影响。考虑：客户流失率、重新获得客户的成本、议价能力降低以及市场地位削弱。"
+    },
+    "competitive": {
+      "label": "竞争劣势",
+      "tooltip": "市场份额和竞争地位的丧失",
+      "description": "竞争优势损失。因向竞争对手泄露专利信息、商业秘密或失去市场地位而产生的美元影响。考虑：研发投入暴露、上市时间优势丧失。"
+    },
+    "fines": {
+      "label": "罚款和判决",
+      "tooltip": "监管罚款和法律处罚",
+      "description": "罚款与判决。监管处罚、法律和解和法院判决。考虑：适用的法规（如 GDPR, HIPAA）、每条记录的罚金率、集体诉讼风险和合同罚款。"
+    }
+  }
+}

@@ -7,6 +7,11 @@
   "topbar": {
     "copy_url": "Copy URL",
     "scenarios": "Scenarios",
+    "settings": "Settings",
+    "report": "Generate Report",
+    "iterations": "Iterations:",
+    "save": "Save",
+    "new_scenario": "Untitled Scenario",
     "theme": {
       "light": "Light",
       "dark": "Dark",
@@ -16,6 +21,11 @@
   "input": {
     "ci_min": "90% CI Min",
     "ci_max": "90% CI Max",
+    "low": "Low:",
+    "high": "High:",
+    "min": "Min:",
+    "mode": "Mode:",
+    "max": "Max:",
     "validation": {
       "required": "This field is required",
       "min_less_than_max": "Minimum must be less than maximum",
@@ -25,17 +35,25 @@
       "count": "Count",
       "days": "Days",
       "percent": "Percent",
-      "dollars": "Dollars"
+      "dollars": "Dollars",
+      "probability": "Probability",
+      "events_year": "Events/Year"
     },
     "expand": "Expand",
     "collapse": "Collapse",
+    "expand_all": "Expand All",
+    "collapse_all": "Collapse All",
     "stage_1": "Stage 1 (Direct Estimation)",
     "stage_2": "Stage 2 (Decomposed Estimation)",
     "expand_all_tooltip": "Expand all factors (Stage 2: full decomposition)",
     "collapse_all_tooltip": "Collapse all factors"
   },
   "results": {
-    "chart_title": "Risk Distribution",
+    "chart_title": "Loss Exceedance Curve",
+    "stats_title": "Summary Statistics",
+    "breakdown_title": "Loss Category Breakdown",
+    "log_scale": "Log Scale",
+    "linear_scale": "Linear",
     "simulating": "Simulating...",
     "error": "Error during simulation",
     "axis": {
@@ -47,6 +65,7 @@
       "median": "Median",
       "min": "Min",
       "max": "Max",
+      "p90": "90th Percentile",
       "std_dev": "Std Dev",
       "percentile_5": "5th Percentile",
       "percentile_95": "95th Percentile"
@@ -61,88 +80,150 @@
     "new": "New scenario",
     "delete": "Delete",
     "last_modified": "Last modified",
-    "url_copied": "URL copied to clipboard"
+    "url_copied": "URL copied to clipboard",
+    "empty": "No saved scenarios",
+    "load_examples": "Load Examples",
+    "clear_examples": "Clear Examples",
+    "export_json": "Export JSON",
+    "import_json": "Import JSON"
   },
   "responsive": {
     "inputs_label": "Inputs",
     "results_label": "Results"
   },
+  "tutorial": {
+    "aria_label": "Tutorial navigation",
+    "callout_label": "Tutorial guidance",
+    "resumed": "Tutorial resumed",
+    "prev": "Previous step",
+    "next": "Next step",
+    "exit": "Exit tutorial",
+    "exit_confirm": "Exit tutorial? Your progress will be lost.",
+    "chapter": "Chapter {n}",
+    "scenario_header": "In This Scenario",
+    "numbers_header": "Why These Numbers?",
+    "try_it_header": "Try It",
+    "reset_values": "Reset Values"
+  },
+  "report": {
+    "title": "FAIR Risk Analysis Report",
+    "scenario": "Scenario",
+    "date": "Date",
+    "analyst": "Analyst: [YOUR NAME]",
+    "input_mode": "Input Mode",
+    "mode_ci": "2-point Confidence Interval",
+    "mode_pert": "3-point PERT estimation",
+    "iterations": "Iterations",
+    "exec_summary": "EXECUTIVE SUMMARY",
+    "exec_summary_prompt": "[Provide a brief overview of the risk scenario, key findings, and recommendations.]",
+    "factor_analysis": "FACTOR ANALYSIS",
+    "rationale_prompt": "[RATIONALE: Explain why these values were chosen. E.g., \"...\"]",
+    "and": "and",
+    "estimated_via": "Estimated via decomposition into",
+    "no_values": "[No values set]",
+    "sim_results": "SIMULATION RESULTS",
+    "methodology": "METHODOLOGY",
+    "method_desc_1": "This analysis uses the Factor Analysis of Information Risk (FAIR) framework with Monte Carlo simulation",
+    "method_desc_2": "using",
+    "method_pert": "Beta-PERT distributions.",
+    "method_ci": "uniform distributions within confidence intervals.",
+    "references": "References:"
+  },
   "factor": {
     "risk": {
       "label": "Risk",
-      "tooltip": "Risk is the probable frequency and probable magnitude of future loss"
+      "tooltip": "Risk is the probable frequency and probable magnitude of future loss",
+      "description": "Risk (Annualized Loss Exposure). The probable frequency and magnitude of future loss, expressed as an annualized dollar figure. This is the top-level output: ALE = Loss Event Frequency × Loss Magnitude. Enter the 90% confidence interval for your overall estimated annual loss (Stage 1: direct estimation at branch level), or expand to decompose into LEF and LM and their sub-factors (Stage 2: full decomposition into leaf factors)."
     },
     "lef": {
       "label": "Loss Event Frequency (LEF)",
-      "tooltip": "How often do loss events occur?"
+      "tooltip": "How often do loss events occur?",
+      "description": "Loss Event Frequency (LEF). The probable number of times a loss event will occur within a given timeframe (typically one year). Enter the 90% CI for how many loss events you expect per year, or expand into Threat Event Frequency and Vulnerability for a more granular estimate."
     },
     "tef": {
       "label": "Threat Event Frequency (TEF)",
-      "tooltip": "How often do threat events occur?"
+      "tooltip": "How often do threat events occur?",
+      "description": "Threat Event Frequency (TEF). The probable number of times a threat agent will act against an asset within a given timeframe, whether or not the action succeeds. Enter the 90% CI for how many threat events (attempts, not successes) you expect per year. Expand into Contact Frequency and Probability of Action for further decomposition."
     },
     "cf": {
       "label": "Contact Frequency (CF)",
-      "tooltip": "How frequently does the threat contact the asset?"
+      "tooltip": "How frequently does the threat contact the asset?",
+      "description": "Contact Frequency (CF). The probable number of times a threat agent will come into contact with an asset within a given timeframe. This is any encounter — scanning, reconnaissance, physical access attempts, phishing emails received — regardless of whether the threat agent decides to act. Enter the 90% CI for contact events per year."
     },
     "poa": {
       "label": "Probability of Action (POA)",
-      "tooltip": "What is the probability the threat will act when they have contact?"
+      "tooltip": "What is the probability the threat will act when they have contact?",
+      "description": "Probability of Action (PoA). The probability that a threat agent will act once contact has been made. This captures the threat agent’s motivation, risk tolerance, and perceived value of the target. Enter a probability between 0 and 1 (e.g., 0.3 means 30% chance of acting per contact)."
     },
     "vuln": {
       "label": "Vulnerability (VULN)",
-      "tooltip": "What is the probability the asset will be compromised given contact?"
+      "tooltip": "What is the probability the asset will be compromised given contact?",
+      "description": "Vulnerability (Vuln). The probability that a threat event results in a loss. When entered directly, provide a probability between 0 and 1. When expanded into Threat Capability and Resistance Strength, vulnerability is computed as a binary comparison per simulation iteration: if TCap > RS, the threat succeeds (Vuln = 1); otherwise the control holds (Vuln = 0)."
     },
     "tcap": {
       "label": "Threat Capability (TCAP)",
-      "tooltip": "What is the threat's ability to overcome the security controls?"
+      "tooltip": "What is the threat's ability to overcome the security controls?",
+      "description": "Threat Capability (TCap). The probable level of force or skill a threat agent can apply against an asset, on a scale of 0–100. Consider the threat actor’s technical sophistication, resources, and tools. A script kiddie might be 10–30; a nation-state actor 70–95. Use the same scale as Resistance Strength for meaningful comparison."
     },
     "rs": {
       "label": "Resistance Strength (RS)",
-      "tooltip": "How well do your controls resist threats?"
+      "tooltip": "How well do your controls resist threats?",
+      "description": "Resistance Strength (RS). The probable level of resistance a control can provide against a threat, on a scale of 0–100. Consider control maturity, coverage, and effectiveness. A basic firewall might be 20–40; defense-in-depth with monitoring, patching, and segmentation might be 60–85. Use the same scale as Threat Capability."
     },
     "lm": {
       "label": "Loss Magnitude (LM)",
-      "tooltip": "What is the financial impact when a loss event occurs?"
+      "tooltip": "What is the financial impact when a loss event occurs?",
+      "description": "Loss Magnitude (LM). The probable dollar magnitude of loss from a single loss event. Enter the 90% CI in dollars (supports shorthand: 50K, 1.5M, 2B), or expand into Primary and Secondary loss categories to estimate each cost component separately."
     },
     "primary": {
       "label": "Primary Loss",
-      "tooltip": "Direct financial losses from the incident"
+      "tooltip": "Direct financial losses from the incident",
+      "description": "Primary Loss. Direct losses resulting from the event itself — costs incurred by the organization as a first-order effect. Expand to break down into Productivity, Response, and Replacement costs. Enter the 90% CI in dollars."
     },
     "productivity": {
       "label": "Productivity Loss",
-      "tooltip": "Costs due to downtime and reduced productivity"
+      "tooltip": "Costs due to downtime and reduced productivity",
+      "description": "Productivity Loss. Revenue or output lost due to the disruption. Consider: how long will systems be down? What revenue is generated per hour? How many employees are affected and at what cost? Enter the 90% CI in dollars."
     },
     "response": {
       "label": "Response and Recovery",
-      "tooltip": "Costs to respond to and recover from the incident"
+      "tooltip": "Costs to respond to and recover from the incident",
+      "description": "Response Cost. The cost of investigating, containing, and remediating the event. Include: incident response team hours, forensics, external consultants, legal counsel during the response, crisis communications, and customer notification. Enter the 90% CI in dollars."
     },
     "replacement": {
       "label": "Replacement Costs",
-      "tooltip": "Costs to replace or repair damaged assets"
+      "tooltip": "Costs to replace or repair damaged assets",
+      "description": "Replacement Cost. The cost to repair or replace compromised assets. Include: hardware replacement, software re-licensing, data restoration, and infrastructure rebuilding. Enter the 90% CI in dollars."
     },
     "secondary": {
       "label": "Secondary Loss",
-      "tooltip": "Indirect financial losses"
+      "tooltip": "Indirect financial losses",
+      "description": "Secondary Loss. Losses resulting from the reactions of external stakeholders (customers, regulators, partners) to the primary event. These are often the largest component of loss. Expand into SLEF (probability these occur) and SLM (magnitude when they do). Enter the 90% CI in dollars."
     },
     "slef": {
       "label": "Secondary Loss Event Frequency (SLEF)",
-      "tooltip": "How often do secondary loss events occur relative to primary losses?"
+      "tooltip": "How often do secondary loss events occur relative to primary losses?",
+      "description": "Secondary Loss Event Frequency (SLEF). The probability that a primary loss event triggers secondary stakeholder reactions. Not all incidents become public or trigger regulatory action. Enter a probability between 0 and 1 (e.g., 0.3 means 30% chance that secondary losses materialize)."
     },
     "slm": {
       "label": "Secondary Loss Magnitude (SLM)",
-      "tooltip": "What is the financial impact of secondary losses?"
+      "tooltip": "What is the financial impact of secondary losses?",
+      "description": "Secondary Loss Magnitude (SLM). The probable dollar magnitude of secondary losses when they occur. Expand to break down into Reputation, Competitive Advantage, and Fines & Judgments. Enter the 90% CI in dollars."
     },
     "reputation": {
       "label": "Reputation Damage",
-      "tooltip": "Financial impact from brand damage and loss of customer trust"
+      "tooltip": "Financial impact from brand damage and loss of customer trust",
+      "description": "Reputation Damage. Dollar impact of lost customer trust and brand value. Consider: customer churn rate, cost to reacquire lost customers, reduced pricing power, and diminished market position. Enter the 90% CI in dollars."
     },
-    "competitive_advantage": {
+    "competitive": {
       "label": "Competitive Disadvantage",
-      "tooltip": "Loss of market share and competitive position"
+      "tooltip": "Loss of market share and competitive position",
+      "description": "Competitive Advantage Loss. Dollar impact of losing proprietary information, trade secrets, or market position to competitors. Consider: R&D investment exposed, time-to-market advantage lost, and strategic initiative compromise. Enter the 90% CI in dollars."
     },
     "fines": {
       "label": "Fines and Penalties",
-      "tooltip": "Regulatory fines and legal penalties"
+      "tooltip": "Regulatory fines and legal penalties",
+      "description": "Fines & Judgments. Regulatory penalties, legal settlements, and court judgments. Consider: applicable regulations (GDPR, HIPAA, PCI-DSS), per-record penalty rates, class-action exposure, and contractual penalties. Enter the 90% CI in dollars."
     }
   }
 }

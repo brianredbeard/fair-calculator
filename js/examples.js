@@ -11,6 +11,12 @@ const pert = (min, mode, max) => ({
   max: max === 0 ? 0.001 : max
 });
 
+// Helper for CI mode (90% confidence interval, low/high)
+const ci = (low, high) => ({
+  low: low === 0 ? 0.001 : low,
+  high: high === 0 ? 0.001 : high
+});
+
 export const EXAMPLE_SCENARIOS = [
   // Scenario 1: External brute force (high freq, low impact)
   {
@@ -721,21 +727,21 @@ export const EXAMPLE_SCENARIOS = [
     name: 'Example: SaaS CRM outage (Stage 1)',
     narrative: 'Critical third-party SaaS CRM outage. Medium frequency (2-20/year), high primary impact ($200K-$5M), low secondary ($5K-$100K).',
     _isExample: true,
-    inputMode: 'pert',
+    inputMode: 'ci',
     factors: {
       risk: {
         expanded: true,
         children: {
-          lef: { expanded: false, ...pert(2, 6, 20) },
+          lef: { expanded: false, ...ci(2, 20) },
           lm: {
             expanded: true,
             children: {
-              primary: { expanded: false, ...pert(150000, 1000000, 4000000) },
+              primary: { expanded: false, ...ci(150000, 4000000) },
               secondary: {
                 expanded: true,
                 children: {
-                  slef: { expanded: false, ...pert(0.01, 0.05, 0.1) },
-                  slm: { expanded: false, ...pert(5000, 20000, 100000) }
+                  slef: { expanded: false, ...ci(0.01, 0.1) },
+                  slm: { expanded: false, ...ci(5000, 100000) }
                 }
               }
             }
@@ -748,7 +754,7 @@ export const EXAMPLE_SCENARIOS = [
     name: 'Example: SaaS CRM outage (Stage 2)',
     narrative: 'Full decomposition: CF=10-100, PoA=0.5-1.0, TCap=0.5-0.9 (adjusted), RS=0.3-0.7 (adjusted). Primary: Productivity=$150K-$4M (lost sales capacity).',
     _isExample: true,
-    inputMode: 'pert',
+    inputMode: 'ci',
     factors: {
       risk: {
         expanded: true,
@@ -759,15 +765,15 @@ export const EXAMPLE_SCENARIOS = [
               tef: {
                 expanded: true,
                 children: {
-                  cf: { expanded: false, ...pert(10, 30, 100) },
-                  poa: { expanded: false, ...pert(0.5, 0.8, 1.0) }
+                  cf: { expanded: false, ...ci(10, 100) },
+                  poa: { expanded: false, ...ci(0.5, 1.0) }
                 }
               },
               vuln: {
                 expanded: true,
                 children: {
-                  tcap: { expanded: false, ...pert(0.5, 0.7, 0.9) },
-                  rs: { expanded: false, ...pert(0.3, 0.5, 0.7) }
+                  tcap: { expanded: false, ...ci(0.5, 0.9) },
+                  rs: { expanded: false, ...ci(0.3, 0.7) }
                 }
               }
             }
@@ -778,21 +784,21 @@ export const EXAMPLE_SCENARIOS = [
               primary: {
                 expanded: true,
                 children: {
-                  productivity: { expanded: false, ...pert(150000, 1000000, 4000000) },
-                  response: { expanded: false, ...pert(0, 0, 0) },
-                  replacement: { expanded: false, ...pert(0, 0, 0) }
+                  productivity: { expanded: false, ...ci(150000, 4000000) },
+                  response: { expanded: false, ...ci(0, 0) },
+                  replacement: { expanded: false, ...ci(0, 0) }
                 }
               },
               secondary: {
                 expanded: true,
                 children: {
-                  slef: { expanded: false, ...pert(0.01, 0.05, 0.1) },
+                  slef: { expanded: false, ...ci(0.01, 0.1) },
                   slm: {
                     expanded: true,
                     children: {
-                      fines: { expanded: false, ...pert(0, 0, 10000) },
-                      reputation: { expanded: false, ...pert(5000, 10000, 50000) },
-                      competitive: { expanded: false, ...pert(0, 10000, 40000) }
+                      fines: { expanded: false, ...ci(0, 10000) },
+                      reputation: { expanded: false, ...ci(5000, 50000) },
+                      competitive: { expanded: false, ...ci(0, 40000) }
                     }
                   }
                 }
@@ -804,26 +810,26 @@ export const EXAMPLE_SCENARIOS = [
     }
   },
 
-  // Scenario 10: Legacy system compromise (high freq, low magnitude)
+  // Scenario 10: Legacy system compromise (high freq, low magnitude) — CI mode
   {
     name: 'Example: Legacy system compromise (Stage 1)',
     narrative: 'Low-value legacy system compromise. High frequency (5-80/year), low magnitude ($12K-$200K per event).',
     _isExample: true,
-    inputMode: 'pert',
+    inputMode: 'ci',
     factors: {
       risk: {
         expanded: true,
         children: {
-          lef: { expanded: false, ...pert(5, 25, 80) },
+          lef: { expanded: false, ...ci(5, 80) },
           lm: {
             expanded: true,
             children: {
-              primary: { expanded: false, ...pert(10000, 30000, 150000) },
+              primary: { expanded: false, ...ci(10000, 150000) },
               secondary: {
                 expanded: true,
                 children: {
-                  slef: { expanded: false, ...pert(0.05, 0.15, 0.3) },
-                  slm: { expanded: false, ...pert(2000, 10000, 50000) }
+                  slef: { expanded: false, ...ci(0.05, 0.3) },
+                  slm: { expanded: false, ...ci(2000, 50000) }
                 }
               }
             }
@@ -836,7 +842,7 @@ export const EXAMPLE_SCENARIOS = [
     name: 'Example: Legacy system compromise (Stage 2)',
     narrative: 'Full decomposition: CF=50-500, PoA=0.05-0.3, TCap=0.4-0.8, RS=0.3-0.7. Primary: Productivity=$5K-$100K, Response=$5K-$50K.',
     _isExample: true,
-    inputMode: 'pert',
+    inputMode: 'ci',
     factors: {
       risk: {
         expanded: true,
@@ -847,15 +853,15 @@ export const EXAMPLE_SCENARIOS = [
               tef: {
                 expanded: true,
                 children: {
-                  cf: { expanded: false, ...pert(50, 200, 500) },
-                  poa: { expanded: false, ...pert(0.05, 0.15, 0.3) }
+                  cf: { expanded: false, ...ci(50, 500) },
+                  poa: { expanded: false, ...ci(0.05, 0.3) }
                 }
               },
               vuln: {
                 expanded: true,
                 children: {
-                  tcap: { expanded: false, ...pert(0.4, 0.6, 0.8) },
-                  rs: { expanded: false, ...pert(0.3, 0.5, 0.7) }
+                  tcap: { expanded: false, ...ci(0.4, 0.8) },
+                  rs: { expanded: false, ...ci(0.3, 0.7) }
                 }
               }
             }
@@ -866,21 +872,21 @@ export const EXAMPLE_SCENARIOS = [
               primary: {
                 expanded: true,
                 children: {
-                  productivity: { expanded: false, ...pert(5000, 15000, 100000) },
-                  response: { expanded: false, ...pert(5000, 15000, 50000) },
-                  replacement: { expanded: false, ...pert(0, 0, 0) }
+                  productivity: { expanded: false, ...ci(5000, 100000) },
+                  response: { expanded: false, ...ci(5000, 50000) },
+                  replacement: { expanded: false, ...ci(0, 0) }
                 }
               },
               secondary: {
                 expanded: true,
                 children: {
-                  slef: { expanded: false, ...pert(0.05, 0.15, 0.3) },
+                  slef: { expanded: false, ...ci(0.05, 0.3) },
                   slm: {
                     expanded: true,
                     children: {
-                      fines: { expanded: false, ...pert(0, 1000, 10000) },
-                      reputation: { expanded: false, ...pert(1000, 5000, 25000) },
-                      competitive: { expanded: false, ...pert(1000, 4000, 15000) }
+                      fines: { expanded: false, ...ci(0, 10000) },
+                      reputation: { expanded: false, ...ci(1000, 25000) },
+                      competitive: { expanded: false, ...ci(1000, 15000) }
                     }
                   }
                 }

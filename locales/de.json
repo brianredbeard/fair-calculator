@@ -1,0 +1,229 @@
+{
+  "skip_nav": "Zu den Ergebnissen springen",
+  "app": {
+    "title": "FAIR-Rechner",
+    "subtitle": "Faktorenanalyse des Informationsrisikos"
+  },
+  "topbar": {
+    "copy_url": "URL kopieren",
+    "scenarios": "Szenarien",
+    "settings": "Einstellungen",
+    "report": "Bericht erstellen",
+    "iterations": "Iterationen:",
+    "save": "Speichern",
+    "new_scenario": "Unbenanntes Szenario",
+    "theme": {
+      "light": "Hell",
+      "dark": "Dunkel",
+      "auto": "Auto"
+    }
+  },
+  "input": {
+    "ci_min": "90% KI Min",
+    "ci_max": "90% KI Max",
+    "low": "Tief:",
+    "high": "Hoch:",
+    "min": "Min:",
+    "mode": "Modus:",
+    "max": "Max:",
+    "validation": {
+      "required": "Dieses Feld ist erforderlich",
+      "min_less_than_max": "Das Minimum muss kleiner sein als das Maximum",
+      "positive_number": "Muss eine positive Zahl sein"
+    },
+    "unit_labels": {
+      "count": "Anzahl",
+      "days": "Tage",
+      "percent": "Prozent",
+      "dollars": "Dollar",
+      "probability": "Wahrscheinlichkeit",
+      "events_year": "Ereignisse/Jahr"
+    },
+    "expand": "Erweitern",
+    "collapse": "Reduzieren",
+    "expand_all": "Alle erweitern",
+    "collapse_all": "Alle reduzieren",
+    "stage_1": "Stufe 1 (Direkte Schätzung)",
+    "stage_2": "Stufe 2 (Dekomponierte Schätzung)",
+    "expand_all_tooltip": "Alle Faktoren erweitern (Stufe 2: vollständige Dekomposition)",
+    "collapse_all_tooltip": "Alle Faktoren reduzieren"
+  },
+  "results": {
+    "chart_title": "Verlust-Überschreitungskurve",
+    "stats_title": "Zusammenfassende Statistiken",
+    "breakdown_title": "Aufschlüsselung nach Verlustkategorie",
+    "log_scale": "Log. Skala",
+    "linear_scale": "Linear",
+    "simulating": "Simuliere...",
+    "error": "Fehler während der Simulation",
+    "axis": {
+      "x": "Jährliche Verlusterwartung ($)",
+      "y": "Wahrscheinlichkeit"
+    },
+    "stats": {
+      "mean": "Mittelwert",
+      "median": "Median",
+      "p90": "90. Perzentil",
+      "min": "Min",
+      "max": "Max",
+      "std_dev": "Std.-Abw.",
+      "percentile_5": "5. Perzentil",
+      "percentile_95": "95. Perzentil"
+    }
+  },
+  "export": {
+    "png": "Als PNG exportieren",
+    "svg": "Als SVG exportieren"
+  },
+  "scenarios": {
+    "saved": "Szenario gespeichert",
+    "new": "Neues Szenario",
+    "delete": "Löschen",
+    "last_modified": "Zuletzt geändert",
+    "url_copied": "URL in Zwischenablage kopiert",
+    "empty": "Keine gespeicherten Szenarien",
+    "load_examples": "Beispiele laden",
+    "clear_examples": "Beispiele löschen",
+    "export_json": "Export JSON",
+    "import_json": "Import JSON"
+  },
+  "responsive": {
+    "inputs_label": "Eingaben",
+    "results_label": "Ergebnisse"
+  },
+  "tutorial": {
+    "prev": "Vorheriger Schritt",
+    "next": "Nächster Schritt",
+    "exit": "Tutorial beenden",
+    "exit_confirm": "Tutorial beenden? Ihr Fortschritt geht verloren.",
+    "chapter": "Kapitel {n}",
+    "scenario_header": "In diesem Szenario",
+    "numbers_header": "Warum diese Zahlen?",
+    "try_it_header": "Ausprobieren",
+    "reset_values": "Werte zurücksetzen",
+    "aria_label": "Tutorial-Navigation",
+    "callout_label": "Tutorial-Anleitung",
+    "resumed": "Tutorial fortgesetzt"
+  },
+  "report": {
+    "title": "FAIR Risikoanalysebericht",
+    "scenario": "Szenario",
+    "date": "Datum",
+    "analyst": "Analyst: [IHR NAME]",
+    "input_mode": "Eingabemodus",
+    "mode_ci": "2-Punkt-Konfidenzintervall",
+    "mode_pert": "3-Punkt-PERT-Schätzung",
+    "iterations": "Iterationen",
+    "exec_summary": "MANAGEMENTZUSAMMENFASSUNG",
+    "exec_summary_prompt": "[Geben Sie einen kurzen Überblick über das Risikoszenario, die wichtigsten Ergebnisse und Empfehlungen.]",
+    "factor_analysis": "FAKTORENANALYSE",
+    "rationale_prompt": "[BEGRÜNDUNG: Erklären Sie, warum diese Werte gewählt wurden. Z. B. \"...\"]",
+    "and": "und",
+    "estimated_via": "Geschätzt durch Zerlegung in",
+    "no_values": "[Keine Werte gesetzt]",
+    "sim_results": "SIMULATIONSERGEBNISSE",
+    "methodology": "METHODIK",
+    "method_desc_1": "Diese Analyse verwendet das Factor Analysis of Information Risk (FAIR) Framework mit Monte-Carlo-Simulation",
+    "method_desc_2": "mit",
+    "method_pert": "Beta-PERT-Verteilungen.",
+    "method_ci": "gleichmäßigen Verteilungen innerhalb von Konfidenzintervallen.",
+    "references": "Referenzen:"
+  },
+  "factor": {
+    "risk": {
+      "label": "Risiko",
+      "tooltip": "Risiko ist die wahrscheinliche Häufigkeit und wahrscheinliche Höhe zukünftiger Verluste",
+      "description": "Risiko (Jährliche Verlusterwartung). Die wahrscheinliche Häufigkeit und Höhe zukünftiger Verluste, ausgedrückt als jährlicher Dollarbetrag. Dies ist das Ergebnis der obersten Ebene: ALE = Verlustereignishäufigkeit × Verlustausmaß. Geben Sie das 90%-Konfidenzintervall für Ihren geschätzten jährlichen Gesamtverlust ein (Stufe 1: direkte Schätzung auf Zweigebene), oder erweitern Sie es, um es in LEF und LM und deren Unterfaktoren zu zerlegen (Stufe 2: vollständige Dekomposition)."
+    },
+    "lef": {
+      "label": "Verlustereignishäufigkeit (LEF)",
+      "tooltip": "Wie oft treten Verlustereignisse auf?",
+      "description": "Verlustereignishäufigkeit (LEF). Die wahrscheinliche Anzahl der Male, die ein Verlustereignis innerhalb eines bestimmten Zeitrahmens (normalerweise ein Jahr) auftreten wird. Geben Sie das 90%-KI dafür ein, wie viele Verlustereignisse Sie pro Jahr erwarten, oder erweitern Sie es in Bedrohungsereignishäufigkeit und Schwachstelle für eine detailliertere Schätzung."
+    },
+    "tef": {
+      "label": "Bedrohungsereignishäufigkeit (TEF)",
+      "tooltip": "Wie oft treten Bedrohungsereignisse auf?",
+      "description": "Bedrohungsereignishäufigkeit (TEF). Die wahrscheinliche Anzahl der Male, die ein Bedrohungsakteur innerhalb eines bestimmten Zeitrahmens gegen ein Asset vorgehen wird, unabhängig davon, ob die Aktion erfolgreich ist oder nicht. Geben Sie das 90%-KI für Bedrohungsereignisse (Versuche, nicht Erfolge) pro Jahr ein. Erweitern Sie in Kontakthäufigkeit und Aktionswahrscheinlichkeit für eine weitere Zerlegung."
+    },
+    "cf": {
+      "label": "Kontakthäufigkeit (CF)",
+      "tooltip": "Wie oft kommt die Bedrohung mit dem Asset in Kontakt?",
+      "description": "Kontakthäufigkeit (CF). Die wahrscheinliche Anzahl der Male, die ein Bedrohungsakteur innerhalb eines bestimmten Zeitrahmens mit einem Asset in Kontakt kommt. Dies umfasst jede Begegnung — Scannen, Aufklärung, physische Zugriffsversuche, Phishing-E-Mails — unabhängig davon, ob der Akteur handelt. Geben Sie das 90%-KI für Kontaktereignisse pro Jahr ein."
+    },
+    "poa": {
+      "label": "Aktionswahrscheinlichkeit (POA)",
+      "tooltip": "Wie hoch ist die Wahrscheinlichkeit, dass die Bedrohung bei einem Kontakt handelt?",
+      "description": "Aktionswahrscheinlichkeit (PoA). Die Wahrscheinlichkeit, dass ein Bedrohungsakteur handelt, sobald ein Kontakt hergestellt wurde. Dies erfasst die Motivation, Risikotoleranz und den wahrgenommenen Wert des Ziels. Geben Sie eine Wahrscheinlichkeit zwischen 0 und 1 ein (z. B. 0,3 bedeutet 30% Chance zu handeln pro Kontakt)."
+    },
+    "vuln": {
+      "label": "Schwachstelle (VULN)",
+      "tooltip": "Wie hoch ist die Wahrscheinlichkeit, dass das Asset bei Kontakt kompromittiert wird?",
+      "description": "Schwachstelle (Vuln). Die Wahrscheinlichkeit, dass ein Bedrohungsereignis zu einem Verlust führt. Geben Sie eine Wahrscheinlichkeit zwischen 0 und 1 an. Wenn zerlegt in Bedrohungsfähigkeit und Widerstandsstärke, wird die Schwachstelle als binärer Vergleich pro Simulation berechnet: Wenn TCap > RS, ist die Bedrohung erfolgreich (Vuln = 1); andernfalls hält die Kontrolle (Vuln = 0)."
+    },
+    "tcap": {
+      "label": "Bedrohungsfähigkeit (TCAP)",
+      "tooltip": "Wie hoch ist die Fähigkeit der Bedrohung, Sicherheitskontrollen zu überwinden?",
+      "description": "Bedrohungsfähigkeit (TCap). Die wahrscheinliche Stärke oder Geschicklichkeit eines Bedrohungsakteurs, auf einer Skala von 0–100. Berücksichtigen Sie die technische Raffinesse, Ressourcen und Werkzeuge. Ein Script-Kiddie könnte bei 10–30 liegen; ein staatlicher Akteur bei 70–95. Verwenden Sie dieselbe Skala wie für die Widerstandsstärke."
+    },
+    "rs": {
+      "label": "Widerstandsstärke (RS)",
+      "tooltip": "Wie gut widerstehen Ihre Kontrollen Bedrohungen?",
+      "description": "Widerstandsstärke (RS). Die wahrscheinliche Stärke des Widerstands, den eine Kontrolle gegen eine Bedrohung leisten kann, auf einer Skala von 0–100. Berücksichtigen Sie Reifegrad, Abdeckung und Wirksamkeit. Eine einfache Firewall könnte bei 20–40 liegen; Defense-in-Depth mit Monitoring und Patching bei 60–85. Verwenden Sie dieselbe Skala wie für die Bedrohungsfähigkeit."
+    },
+    "lm": {
+      "label": "Verlustausmaß (LM)",
+      "tooltip": "Wie groß sind die finanziellen Auswirkungen, wenn ein Verlustereignis eintritt?",
+      "description": "Verlustausmaß (LM). Das wahrscheinliche Dollar-Ausmaß des Verlusts aus einem einzelnen Ereignis. Geben Sie das 90%-KI in Dollar ein (Kürzel unterstützt: 50K, 1.5M, 2B), oder erweitern Sie in primäre und sekundäre Verlustkategorien, um jede Komponente separat zu schätzen."
+    },
+    "primary": {
+      "label": "Primärer Verlust",
+      "tooltip": "Direkte finanzielle Verluste aus dem Vorfall",
+      "description": "Primärer Verlust. Direkte Verluste aus dem Ereignis selbst — Kosten, die der Organisation als Effekt erster Ordnung entstehen. Erweitern Sie, um in Produktivität, Reaktion und Ersatzkosten aufzuschlüsseln. Geben Sie das 90%-KI in Dollar ein."
+    },
+    "productivity": {
+      "label": "Produktivitätsverlust",
+      "tooltip": "Kosten aufgrund von Ausfallzeiten und verminderter Produktivität",
+      "description": "Produktivitätsverlust. Einnahmen oder Output, die aufgrund der Störung verloren gehen. Berücksichtigen Sie: Wie lange fallen Systeme aus? Welcher Umsatz wird pro Stunde generiert? Wie viele Mitarbeiter sind betroffen? Geben Sie das 90%-KI in Dollar ein."
+    },
+    "response": {
+      "label": "Reaktion und Wiederherstellung",
+      "tooltip": "Kosten für die Reaktion auf den Vorfall und die Wiederherstellung",
+      "description": "Reaktionskosten. Die Kosten für Untersuchung, Eindämmung und Behebung des Ereignisses. Enthalten: IR-Teamstunden, Forensik, externe Berater, Rechtsbeistand, Krisenkommunikation und Kundenbenachrichtigung. Geben Sie das 90%-KI in Dollar ein."
+    },
+    "replacement": {
+      "label": "Ersatzkosten",
+      "tooltip": "Kosten für den Ersatz oder die Reparatur beschädigter Assets",
+      "description": "Ersatzkosten. Die Kosten für die Reparatur oder den Ersatz kompromittierter Assets. Enthalten: Hardware-Ersatz, Software-Lizenzen, Datenwiederherstellung und Wiederaufbau der Infrastruktur. Geben Sie das 90%-KI in Dollar ein."
+    },
+    "secondary": {
+      "label": "Sekundärer Verlust",
+      "tooltip": "Indirekte finanzielle Verluste",
+      "description": "Sekundärer Verlust. Verluste aus den Reaktionen externer Stakeholder (Kunden, Regulierungsbehörden, Partner) auf das primäre Ereignis. Dies ist oft die größte Komponente. Erweitern Sie in SLEF (Wahrscheinlichkeit) und SLM (Ausmaß). Geben Sie das 90%-KI in Dollar ein."
+    },
+    "slef": {
+      "label": "Sekundäre Verlustereignishäufigkeit (SLEF)",
+      "tooltip": "Wie oft treten sekundäre Verlustereignisse im Verhältnis zu primären auf?",
+      "description": "Sekundäre Verlustereignishäufigkeit (SLEF). Die Wahrscheinlichkeit, dass ein primäres Verlustereignis Reaktionen sekundärer Stakeholder auslöst. Nicht alle Vorfälle werden öffentlich. Geben Sie eine Wahrscheinlichkeit zwischen 0 und 1 ein (z. B. 0,3 bedeutet 30% Chance, dass sekundäre Verluste eintreten)."
+    },
+    "slm": {
+      "label": "Sekundäres Verlustausmaß (SLM)",
+      "tooltip": "Wie groß sind die finanziellen Auswirkungen der sekundären Verluste?",
+      "description": "Sekundäres Verlustausmaß (SLM). Das wahrscheinliche Dollar-Ausmaß der sekundären Verluste, wenn sie eintreten. Aufschlüsseln in Reputationsschaden, Wettbewerbsnachteil und Geldstrafen. Geben Sie das 90%-KI in Dollar ein."
+    },
+    "reputation": {
+      "label": "Reputationsschaden",
+      "tooltip": "Finanzielle Auswirkungen durch Markenschäden und den Verlust von Kundenvertrauen",
+      "description": "Reputationsschaden. Dollar-Auswirkungen des Verlusts von Kundenvertrauen und Markenwert. Berücksichtigen Sie: Abwanderungsrate, Kosten für Neukundengewinnung, reduzierte Preismacht und geschwächte Marktposition. Geben Sie das 90%-KI in Dollar ein."
+    },
+    "competitive": {
+      "label": "Wettbewerbsnachteil",
+      "tooltip": "Verlust von Marktanteilen und der Wettbewerbsposition",
+      "description": "Verlust von Wettbewerbsvorteilen. Dollar-Auswirkungen des Verlusts von proprietären Informationen, Geschäftsgeheimnissen oder Marktposition an Wettbewerber. Berücksichtigen Sie: exponierte F&E-Investitionen, verlorener Time-to-Market-Vorteil. Geben Sie das 90%-KI in Dollar ein."
+    },
+    "fines": {
+      "label": "Geldstrafen und Urteile",
+      "tooltip": "Behördliche Geldstrafen und rechtliche Sanktionen",
+      "description": "Geldstrafen und Urteile. Behördliche Sanktionen, rechtliche Vergleiche und Gerichtsurteile. Berücksichtigen Sie: geltende Vorschriften (DSGVO, HIPAA), Strafsätze pro Datensatz, Sammelklagen und vertragliche Strafen. Geben Sie das 90%-KI in Dollar ein."
+    }
+  }
+}

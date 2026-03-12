@@ -142,7 +142,7 @@ export class ScenarioStore {
    * @param {string} id - Optional ID for update. If not provided, generates new ID.
    * @returns {string} Scenario ID (new or existing)
    */
-  save(scenario, id) {
+  save(scenario, id, timestamp) {
     const all = this._readAll();
 
     // Generate new ID if not provided
@@ -151,7 +151,7 @@ export class ScenarioStore {
     }
 
     // Set/update lastModified timestamp
-    scenario.lastModified = Date.now();
+    scenario.lastModified = timestamp || Date.now();
 
     // Save or update
     all[id] = scenario;

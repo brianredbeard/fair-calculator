@@ -1,0 +1,229 @@
+{
+  "skip_nav": "Saltar a los resultados",
+  "app": {
+    "title": "Calculadora FAIR",
+    "subtitle": "Análisis de Factores de Riesgo de la Información"
+  },
+  "topbar": {
+    "copy_url": "Copiar URL",
+    "scenarios": "Escenarios",
+    "settings": "Configuración",
+    "report": "Generar Informe",
+    "iterations": "Iteraciones:",
+    "save": "Guardar",
+    "new_scenario": "Escenario sin título",
+    "theme": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "auto": "Automático"
+    }
+  },
+  "input": {
+    "ci_min": "90% IC Mínimo",
+    "ci_max": "90% IC Máximo",
+    "low": "Bajo:",
+    "high": "Alto:",
+    "min": "Mín:",
+    "mode": "Moda:",
+    "max": "Máx:",
+    "validation": {
+      "required": "Este campo es obligatorio",
+      "min_less_than_max": "El mínimo debe ser menor que el máximo",
+      "positive_number": "Debe ser un número positivo"
+    },
+    "unit_labels": {
+      "count": "Cantidad",
+      "days": "Días",
+      "percent": "Porcentaje",
+      "dollars": "Dólares",
+      "probability": "Probabilidad",
+      "events_year": "Eventos/Año"
+    },
+    "expand": "Expandir",
+    "collapse": "Colapsar",
+    "expand_all": "Expandir Todo",
+    "collapse_all": "Colapsar Todo",
+    "stage_1": "Etapa 1 (Estimación Directa)",
+    "stage_2": "Etapa 2 (Estimación Descompuesta)",
+    "expand_all_tooltip": "Expandir todos los factores (Etapa 2: descomposición completa)",
+    "collapse_all_tooltip": "Colapsar todos los factores"
+  },
+  "results": {
+    "chart_title": "Curva de Excedencia de Pérdidas",
+    "stats_title": "Estadísticas del Resumen",
+    "breakdown_title": "Desglose por Categoría de Pérdida",
+    "log_scale": "Escala Logarítmica",
+    "linear_scale": "Lineal",
+    "simulating": "Simulando...",
+    "error": "Error durante la simulación",
+    "axis": {
+      "x": "Exposición Anual a Pérdidas ($)",
+      "y": "Probabilidad"
+    },
+    "stats": {
+      "mean": "Media",
+      "median": "Mediana",
+      "p90": "Percentil 90",
+      "min": "Mín",
+      "max": "Máx",
+      "std_dev": "Desv. Est.",
+      "percentile_5": "Percentil 5",
+      "percentile_95": "Percentil 95"
+    }
+  },
+  "export": {
+    "png": "Exportar PNG",
+    "svg": "Exportar SVG"
+  },
+  "scenarios": {
+    "saved": "Escenario guardado",
+    "new": "Nuevo escenario",
+    "delete": "Eliminar",
+    "last_modified": "Última modificación",
+    "url_copied": "URL copiada al portapapeles",
+    "empty": "No hay escenarios guardados",
+    "load_examples": "Cargar Ejemplos",
+    "clear_examples": "Limpiar Ejemplos",
+    "export_json": "Exportar JSON",
+    "import_json": "Importar JSON"
+  },
+  "responsive": {
+    "inputs_label": "Entradas",
+    "results_label": "Resultados"
+  },
+  "tutorial": {
+    "prev": "Paso anterior",
+    "next": "Paso siguiente",
+    "exit": "Salir del tutorial",
+    "exit_confirm": "¿Salir del tutorial? Se perderá tu progreso.",
+    "chapter": "Capítulo {n}",
+    "scenario_header": "En este escenario",
+    "numbers_header": "¿Por qué estos números?",
+    "try_it_header": "Pruébalo",
+    "reset_values": "Restablecer valores",
+    "aria_label": "Navegación del tutorial",
+    "callout_label": "Guía del tutorial",
+    "resumed": "Tutorial reanudado"
+  },
+  "report": {
+    "title": "Informe de Análisis de Riesgo FAIR",
+    "scenario": "Escenario",
+    "date": "Fecha",
+    "analyst": "Analista: [SU NOMBRE]",
+    "input_mode": "Modo de Entrada",
+    "mode_ci": "Intervalo de confianza de 2 puntos",
+    "mode_pert": "Estimación PERT de 3 puntos",
+    "iterations": "Iteraciones",
+    "exec_summary": "RESUMEN EJECUTIVO",
+    "exec_summary_prompt": "[Proporcione una breve descripción del escenario de riesgo, hallazgos clave y recomendaciones.]",
+    "factor_analysis": "ANÁLISIS DE FACTORES",
+    "rationale_prompt": "[JUSTIFICACIÓN: Explique por qué se eligieron estos valores. Ej., \"...\"]",
+    "and": "y",
+    "estimated_via": "Estimado mediante descomposición en",
+    "no_values": "[Sin valores]",
+    "sim_results": "RESULTADOS DE LA SIMULACIÓN",
+    "methodology": "METODOLOGÍA",
+    "method_desc_1": "Este análisis utiliza el marco Factor Analysis of Information Risk (FAIR) con simulación de Monte Carlo",
+    "method_desc_2": "usando",
+    "method_pert": "distribuciones Beta-PERT.",
+    "method_ci": "distribuciones uniformes dentro de intervalos de confianza.",
+    "references": "Referencias:"
+  },
+  "factor": {
+    "risk": {
+      "label": "Riesgo",
+      "tooltip": "El riesgo es la frecuencia probable y la magnitud probable de futuras pérdidas",
+      "description": "Riesgo (Exposición Anual a Pérdidas). La frecuencia y magnitud probable de pérdidas futuras, expresadas como una cifra anual en dólares. Este es el resultado de nivel superior: ALE = Frecuencia de Eventos de Pérdida × Magnitud de Pérdida. Introduzca el intervalo de confianza del 90% para su pérdida anual estimada global (Etapa 1: estimación directa a nivel de rama), o expanda para descomponer en LEF y LM y sus subfactores (Etapa 2: descomposición completa en factores de hoja)."
+    },
+    "lef": {
+      "label": "Frecuencia de Eventos de Pérdida (LEF)",
+      "tooltip": "¿Con qué frecuencia ocurren los eventos de pérdida?",
+      "description": "Frecuencia de Eventos de Pérdida (LEF). El número probable de veces que ocurrirá un evento de pérdida dentro de un período de tiempo determinado (normalmente un año). Introduzca el IC del 90% para cuántos eventos de pérdida espera por año, o expanda en Frecuencia de Eventos de Amenaza y Vulnerabilidad para una estimación más detallada."
+    },
+    "tef": {
+      "label": "Frecuencia de Eventos de Amenaza (TEF)",
+      "tooltip": "¿Con qué frecuencia ocurren los eventos de amenaza?",
+      "description": "Frecuencia de Eventos de Amenaza (TEF). El número probable de veces que un agente de amenaza actuará contra un activo dentro de un período de tiempo determinado, tenga éxito o no la acción. Introduzca el IC del 90% para cuántos eventos de amenaza (intentos, no éxitos) espera por año. Expanda en Frecuencia de Contacto y Probabilidad de Acción para una mayor descomposición."
+    },
+    "cf": {
+      "label": "Frecuencia de Contacto (CF)",
+      "tooltip": "¿Con qué frecuencia entra la amenaza en contacto con el activo?",
+      "description": "Frecuencia de Contacto (CF). El número probable de veces que un agente de amenaza entrará en contacto con un activo dentro de un período de tiempo determinado. Esto incluye cualquier encuentro — escaneo, reconocimiento, intentos de acceso físico, correos electrónicos de phishing recibidos — independientemente de si el agente de amenaza decide actuar. Introduzca el IC del 90% para los eventos de contacto por año."
+    },
+    "poa": {
+      "label": "Probabilidad de Acción (POA)",
+      "tooltip": "¿Cuál es la probabilidad de que la amenaza actúe cuando hay contacto?",
+      "description": "Probabilidad de Acción (PoA). La probabilidad de que un agente de amenaza actúe una vez que se ha producido el contacto. Esto captura la motivación, la tolerancia al riesgo y el valor percibido del objetivo por parte del agente de amenaza. Introduzca una probabilidad entre 0 y 1 (por ejemplo, 0.3 significa un 30% de probabilidad de actuar por contacto)."
+    },
+    "vuln": {
+      "label": "Vulnerabilidad (VULN)",
+      "tooltip": "¿Cuál es la probabilidad de que el activo se vea comprometido dado un contacto?",
+      "description": "Vulnerabilidad (Vuln). La probabilidad de que un evento de amenaza resulte en una pérdida. Cuando se introduce directamente, proporcione una probabilidad entre 0 y 1. Cuando se expande en Capacidad de Amenaza y Fuerza de Resistencia, la vulnerabilidad se calcula como una comparación binaria por cada iteración de la simulación: si TCap > RS, la amenaza tiene éxito (Vuln = 1); de lo contrario, el control se mantiene (Vuln = 0)."
+    },
+    "tcap": {
+      "label": "Capacidad de Amenaza (TCAP)",
+      "tooltip": "¿Cuál es la capacidad de la amenaza para superar los controles de seguridad?",
+      "description": "Capacidad de Amenaza (TCap). El nivel probable de fuerza o habilidad que un agente de amenaza puede aplicar contra un activo, en una escala de 0 a 100. Considere la sofisticación técnica del actor de la amenaza, sus recursos y herramientas. Un 'script kiddie' podría estar entre 10 y 30; un actor estatal entre 70 y 95. Utilice la misma escala que la Fuerza de Resistencia para una comparación significativa."
+    },
+    "rs": {
+      "label": "Fuerza de Resistencia (RS)",
+      "tooltip": "¿Qué tan bien resisten sus controles a las amenazas?",
+      "description": "Fuerza de Resistencia (RS). El nivel probable de resistencia que un control puede proporcionar contra una amenaza, en una escala de 0 a 100. Considere la madurez del control, la cobertura y la efectividad. Un firewall básico podría estar entre 20 y 40; la defensa en profundidad con monitoreo, parches y segmentación podría estar entre 60 y 85. Utilice la misma escala que la Capacidad de Amenaza."
+    },
+    "lm": {
+      "label": "Magnitud de Pérdida (LM)",
+      "tooltip": "¿Cuál es el impacto financiero cuando ocurre un evento de pérdida?",
+      "description": "Magnitud de Pérdida (LM). La magnitud probable en dólares de la pérdida de un solo evento de pérdida. Introduzca el IC del 90% en dólares (admite abreviaturas: 50K, 1.5M, 2B), o expanda en las categorías de pérdida Primaria y Secundaria para estimar cada componente de coste por separado."
+    },
+    "primary": {
+      "label": "Pérdida Primaria",
+      "tooltip": "Pérdidas financieras directas del incidente",
+      "description": "Pérdida Primaria. Pérdidas directas resultantes del evento en sí — costes incurridos por la organización como un efecto de primer orden. Expanda para desglosar en costes de Productividad, Respuesta y Reemplazo. Introduzca el IC del 90% en dólares."
+    },
+    "productivity": {
+      "label": "Pérdida de Productividad",
+      "tooltip": "Costos debido al tiempo de inactividad y a la reducción de productividad",
+      "description": "Pérdida de Productividad. Ingresos o producción perdidos debido a la interrupción. Considere: ¿cuánto tiempo estarán los sistemas inactivos? ¿Qué ingresos se generan por hora? ¿Cuántos empleados se ven afectados y a qué coste? Introduzca el IC del 90% en dólares."
+    },
+    "response": {
+      "label": "Respuesta y Recuperación",
+      "tooltip": "Costos de respuesta y recuperación del incidente",
+      "description": "Coste de Respuesta. El coste de investigar, contener y remediar el evento. Incluya: horas del equipo de respuesta a incidentes, análisis forense, consultores externos, asesores legales durante la respuesta, comunicaciones de crisis y notificación a los clientes. Introduzca el IC del 90% en dólares."
+    },
+    "replacement": {
+      "label": "Costos de Reemplazo",
+      "tooltip": "Costos de reemplazo o reparación de activos dañados",
+      "description": "Coste de Reemplazo. El coste de reparar o reemplazar activos comprometidos. Incluya: reemplazo de hardware, nuevas licencias de software, restauración de datos y reconstrucción de infraestructura. Introduzca el IC del 90% en dólares."
+    },
+    "secondary": {
+      "label": "Pérdida Secundaria",
+      "tooltip": "Pérdidas financieras indirectas",
+      "description": "Pérdida Secundaria. Pérdidas resultantes de las reacciones de los interesados externos (clientes, reguladores, socios) ante el evento primario. Estos suelen ser el componente más importante de la pérdida. Expanda en SLEF (probabilidad de que ocurran) y SLM (magnitud cuando ocurren). Introduzca el IC del 90% en dólares."
+    },
+    "slef": {
+      "label": "Frecuencia de Eventos de Pérdida Secundaria (SLEF)",
+      "tooltip": "¿Con qué frecuencia ocurren los eventos de pérdida secundaria en relación con las primarias?",
+      "description": "Frecuencia de Eventos de Pérdida Secundaria (SLEF). La probabilidad de que un evento de pérdida primario desencadene reacciones de los interesados secundarios. No todos los incidentes se hacen públicos o desencadenan acciones regulatorias. Introduzca una probabilidad entre 0 y 1 (por ejemplo, 0.3 significa un 30% de probabilidad de que las pérdidas secundarias se materialicen)."
+    },
+    "slm": {
+      "label": "Magnitud de Pérdida Secundaria (SLM)",
+      "tooltip": "¿Cuál es el impacto financiero de las pérdidas secundarias?",
+      "description": "Magnitud de Pérdida Secundaria (SLM). La magnitud probable en dólares de las pérdidas secundarias cuando ocurren. Expanda para desglosar en Reputación, Ventaja Competitiva y Multas y Sentencias. Introduzca el IC del 90% en dólares."
+    },
+    "reputation": {
+      "label": "Daño a la Reputación",
+      "tooltip": "Impacto financiero por el daño a la marca y la pérdida de confianza del cliente",
+      "description": "Daño a la Reputación. Impacto en dólares de la pérdida de confianza del cliente y del valor de la marca. Considere: tasa de abandono de clientes, coste de volver a adquirir clientes perdidos, reducción del poder de fijación de precios y disminución de la posición en el mercado. Introduzca el IC del 90% en dólares."
+    },
+    "competitive": {
+      "label": "Desventaja Competitiva",
+      "tooltip": "Pérdida de cuota de mercado y de posición competitiva",
+      "description": "Pérdida de Ventaja Competitiva. Impacto en dólares por la pérdida de información patentada, secretos comerciales o posición en el mercado ante los competidores. Considere: inversión en I+D expuesta, ventaja de tiempo de comercialización perdida y compromiso de iniciativas estratégicas. Introduzca el IC del 90% en dólares."
+    },
+    "fines": {
+      "label": "Multas y Sanciones",
+      "tooltip": "Multas regulatorias y sanciones legales",
+      "description": "Multas y Sentencias. Sanciones regulatorias, acuerdos legales y sentencias judiciales. Considere: regulaciones aplicables (GDPR, HIPAA, PCI-DSS), tasas de penalización por registro, exposición a demandas colectivas y penalizaciones contractuales. Introduzca el IC del 90% en dólares."
+    }
+  }
+}

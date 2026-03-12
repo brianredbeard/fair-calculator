@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>TutorialEngine Tests</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    .summary {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding: 12px;
+      border-radius: 4px;
+    }
+    .summary.pass {
+      background: #d4edda;
+      color: #155724;
+    }
+    .summary.fail {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+    .pass {
+      color: #28a745;
+      font-weight: 600;
+    }
+    .fail {
+      color: #dc3545;
+      font-weight: 600;
+    }
+    .error-details {
+      color: #721c24;
+      font-size: 12px;
+      font-family: monospace;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>TutorialEngine Tests</h1>
+  <div id="summary" class="summary"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Test</th>
+        <th>Result</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody id="results"></tbody>
+  </table>
+
+  <script type="module">
+    import { TutorialEngine } from '../js/tutorial-engine.js';
+
+    const results = [];
+
+    function test(name, fn) {
+      try {
+        fn();
+        results.push({ name, pass: true });
+      } catch (error) {
+        results.push({ name, pass: false, error: error.message });
+      }
+    }
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message || 'Assertion failed');
+      }
+    }
+
+    function assertEquals(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(`${message || 'Assertion failed'}: expected ${expected}, got ${actual}`);
+      }
+    }
+
+    // Test data
+    const mockTutorialData = {
+      id: 'test-tutorial',
+      title: 'Test Tutorial',
+      scenarioIndex: 3,
+      frameworkRecap: 'Test framework recap',
+      chapters: [
+        {
+          title: 'Chapter 1',
+          steps: [
+            { factorId: 'lef', action: 'focus', narrative: 'Step 1 narrative' },
+            { factorId: 'tef', action: 'expand', narrative: 'Step 2 narrative' }
+          ]
+        },
+        {
+          title: 'Chapter 2',
+          steps: [
+            { factorId: 'lm', action: 'focus', narrative: 'Step 3 narrative' }
+          ]
+        }
+      ]
+    };
+
+    const mockOriginalState = { factors: { risk: { expanded: true } } };
+
+    // Clear sessionStorage before tests
+    sessionStorage.removeItem('tutorial-progress');
+
+    // Test 1: TutorialEngine class exists and can be instantiated
+    test('TutorialEngine class exists and can be instantiated', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      assert(engine !== null, 'Engine should be instantiated');
+    });
+
+    // Test 2: start() emits tutorial-start and step-change events
+    test('start() emits tutorial-start and step-change events', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let tutorialStartEmitted = false;
+      let stepChangeEmitted = false;
+
+      engine.on('tutorial-start', () => { tutorialStartEmitted = true; });
+      engine.on('step-change', () => { stepChangeEmitted = true; });
+
+      engine.start();
+
+      assert(tutorialStartEmitted, 'tutorial-start should be emitted');
+      assert(stepChangeEmitted, 'step-change should be emitted');
+    });
+
+    // Test 3: step-change event includes stepData
+    test('step-change event includes stepData', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let receivedStepData = null;
+
+      engine.on('step-change', (stepData) => { receivedStepData = stepData; });
+      engine.start();
+
+      assert(receivedStepData !== null, 'stepData should be provided');
+      assertEquals(receivedStepData.factorId, 'lef', 'First step should be LEF');
+    });
+
+    // Test 4: next() advances to next step
+    test('next() advances to next step within chapter', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let stepData = null;
+
+      engine.on('step-change', (data) => { stepData = data; });
+      engine.start();
+
+      assertEquals(stepData.factorId, 'lef', 'First step should be LEF');
+
+      engine.next();
+      assertEquals(stepData.factorId, 'tef', 'Second step should be TEF');
+    });
+
+    // Test 5: next() at end of chapter advances to next chapter
+    test('next() at end of chapter advances to next chapter', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let chapterChangeEmitted = false;
+      let stepData = null;
+
+      engine.on('chapter-change', () => { chapterChangeEmitted = true; });
+      engine.on('step-change', (data) => { stepData = data; });
+
+      engine.start();
+      engine.next(); // Move to step 2
+      engine.next(); // Should move to chapter 2, step 1
+
+      assert(chapterChangeEmitted, 'chapter-change should be emitted');
+      assertEquals(stepData.factorId, 'lm', 'Should be at first step of chapter 2');
+    });
+
+    // Test 6: prev() goes back to previous step
+    test('prev() goes back to previous step', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let stepData = null;
+
+      engine.on('step-change', (data) => { stepData = data; });
+
+      engine.start();
+      engine.next(); // Move to step 2
+      assertEquals(stepData.factorId, 'tef', 'Should be at TEF');
+
+      engine.prev(); // Go back to step 1
+      assertEquals(stepData.factorId, 'lef', 'Should be back at LEF');
+    });
+
+    // Test 7: prev() at start of chapter goes to previous chapter
+    test('prev() at start of chapter goes to previous chapter', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let stepData = null;
+
+      engine.on('step-change', (data) => { stepData = data; });
+
+      engine.start();
+      engine.next(); // Step 2
+      engine.next(); // Chapter 2, Step 1
+
+      assertEquals(stepData.factorId, 'lm', 'Should be at chapter 2');
+
+      engine.prev(); // Should go back to chapter 1, last step
+      assertEquals(stepData.factorId, 'tef', 'Should be at last step of chapter 1');
+    });
+
+    // Test 8: goToChapter() jumps to first step of specified chapter
+    test('goToChapter() jumps to first step of specified chapter', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let stepData = null;
+
+      engine.on('step-change', (data) => { stepData = data; });
+
+      engine.start();
+      engine.goToChapter(1); // Jump to chapter 2 (0-indexed)
+
+      assertEquals(stepData.factorId, 'lm', 'Should be at first step of chapter 2');
+    });
+
+    // Test 9: resetToOriginal() returns the snapshotted state
+    test('resetToOriginal() returns the snapshotted state', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      engine.start();
+
+      const state = engine.resetToOriginal();
+
+      assert(state !== null, 'State should be returned');
+      assert(state.factors !== undefined, 'State should have factors');
+      assertEquals(state.factors.risk.expanded, true, 'State should match original');
+    });
+
+    // Test 10: sessionStorage progress is saved on step change
+    test('sessionStorage progress is saved on step change', () => {
+      sessionStorage.removeItem('tutorial-progress');
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+
+      engine.start();
+
+      const progress = sessionStorage.getItem('tutorial-progress');
+      assert(progress !== null, 'Progress should be saved to sessionStorage');
+
+      const parsed = JSON.parse(progress);
+      assertEquals(parsed.tutorialId, 'test-tutorial', 'Tutorial ID should be saved');
+      assertEquals(parsed.chapterIndex, 0, 'Chapter index should be 0');
+      assertEquals(parsed.stepIndex, 0, 'Step index should be 0');
+    });
+
+    // Test 11: Boundary check - prev() at first step stays at first step
+    test('prev() at first step stays at first step', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let stepData = null;
+
+      engine.on('step-change', (data) => { stepData = data; });
+
+      engine.start();
+      assertEquals(stepData.factorId, 'lef', 'Should start at first step');
+
+      engine.prev(); // Try to go before first step
+      assertEquals(stepData.factorId, 'lef', 'Should still be at first step');
+    });
+
+    // Test 12: Boundary check - next() at last step emits tutorial-end
+    test('next() at last step emits tutorial-end', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let tutorialEndEmitted = false;
+
+      engine.on('tutorial-end', () => { tutorialEndEmitted = true; });
+
+      engine.start();
+      engine.next(); // Step 2
+      engine.next(); // Chapter 2, Step 1
+      engine.next(); // Should emit tutorial-end
+
+      assert(tutorialEndEmitted, 'tutorial-end should be emitted at last step');
+    });
+
+    // Test 13: Event listeners can be removed with off()
+    test('Event listeners can be removed with off()', () => {
+      const engine = new TutorialEngine(mockTutorialData, mockOriginalState);
+      let callCount = 0;
+
+      const handler = () => { callCount++; };
+      engine.on('step-change', handler);
+      engine.start(); // First call
+
+      assertEquals(callCount, 1, 'Handler should be called once');
+
+      engine.off('step-change', handler);
+      engine.next(); // Handler should not be called
+
+      assertEquals(callCount, 1, 'Handler should not be called after off()');
+    });
+
+    // Render results
+    const tbody = document.getElementById('results');
+    const passedCount = results.filter(r => r.pass).length;
+    const totalCount = results.length;
+
+    results.forEach(result => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${result.name}</td>
+        <td class="${result.pass ? 'pass' : 'fail'}">${result.pass ? 'PASS' : 'FAIL'}</td>
+        <td>${result.error ? `<div class="error-details">${result.error}</div>` : ''}</td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    const summary = document.getElementById('summary');
+    summary.textContent = `${passedCount} / ${totalCount} tests passed`;
+    summary.className = `summary ${passedCount === totalCount ? 'pass' : 'fail'}`;
+  </script>
+</body>
+</html>

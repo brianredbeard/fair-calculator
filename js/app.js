@@ -3,6 +3,8 @@ import { loadI18n } from './i18n.js';
 import { FactorTreeUI } from './tree-ui.js';
 import { encodeStateToHash, decodeStateFromHash, ScenarioStore, SettingsStore } from './state.js';
 import { EXAMPLE_SCENARIOS } from './examples.js';
+import { TutorialEngine } from './tutorial-engine.js';
+import { getTutorial, hasTutorial, getTutorialIdByScenarioIndex } from './tutorials/index.js';
 
 let i18n;
 let treeUI;
@@ -13,15 +15,46 @@ let useLogScale = true; // Default to log scale (industry standard for FAIR)
 let lastSimResults = null; // Cache for re-rendering on scale toggle
 let currentScenarioId = null;
 let settings = {}; // Global settings (pertLambda, etc.)
+let tutorialEngine = null;
 const store = new ScenarioStore();
 const settingsStore = new SettingsStore();
+
+// Color palette for category breakdown bars
+const colors = [
+  '#8e44ad', // purple
+  '#2980b9', // blue
+  '#27ae60', // green
+  '#f39c12', // yellow
+  '#e74c3c', // red
+  '#16a085', // teal
+  '#c0392b', // dark red
+  '#2c3e50'  // dark blue
+];
 
 /**
  * Initialize the application
  */
 async function init() {
+  // Load language settings
+  const savedLang = localStorage.getItem('fair-calc-lang') || 'en';
+  document.documentElement.lang = savedLang;
+  document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr';
+
   // Load i18n
-  i18n = await loadI18n('en');
+  i18n = await loadI18n(savedLang);
+
+  // Translate static UI elements
+  translateUI();
+
+  // Setup language selector
+  const langSelect = document.getElementById('language-select');
+  if (langSelect) {
+    langSelect.value = savedLang;
+    langSelect.addEventListener('change', (e) => {
+      localStorage.setItem('fair-calc-lang', e.target.value);
+      window.location.reload();
+    });
+  }
 
   // Load settings
   settings = settingsStore.load();
@@ -49,7 +82,7 @@ async function init() {
 
   // Initialize FactorTreeUI
   const inputPanel = document.getElementById('input-panel');
-  treeUI = new FactorTreeUI(inputPanel, FAIR.tree, onInputChange);
+  treeUI = new FactorTreeUI(inputPanel, FAIR.tree, onInputChange, i18n);
 
   // If we have initial state from URL, restore it
   if (initialState) {
@@ -120,8 +153,75 @@ async function init() {
   // Render scenarios list
   renderScenariosList();
 
+  // Resume tutorial if session exists
+  const tutorialProgress = sessionStorage.getItem('tutorial-progress');
+  if (tutorialProgress) {
+    try {
+      const { tutorialId, chapterIndex, stepIndex } = JSON.parse(tutorialProgress);
+      await startTutorial(tutorialId, chapterIndex, stepIndex);
+      showToast(i18n ? i18n.t('tutorial.resumed') : 'Tutorial resumed');
+    } catch (err) {
+      console.warn('Failed to resume tutorial:', err);
+      sessionStorage.removeItem('tutorial-progress');
+    }
+  }
+
   // Run initial simulation
   runSimulation();
+}
+
+/**
+ * Translate static UI elements in the DOM
+ */
+function translateUI() {
+  // Top bar
+  document.querySelector('.app-title').textContent = i18n.t('app.title');
+  document.querySelector('.app-subtitle').textContent = i18n.t('app.subtitle');
+  document.getElementById('scenario-name').placeholder = i18n.t('topbar.new_scenario');
+  document.getElementById('btn-save-scenario').textContent = i18n.t('topbar.save');
+  document.getElementById('btn-save-scenario').setAttribute('aria-label', i18n.t('topbar.save'));
+  
+  const iterLabel = document.querySelector('.iterations-label');
+  if (iterLabel) {
+    iterLabel.firstChild.textContent = i18n.t('topbar.iterations') + ' ';
+  }
+  
+  document.getElementById('btn-settings').textContent = '⚙️ ' + i18n.t('topbar.settings');
+  document.getElementById('btn-copy-url').textContent = i18n.t('topbar.copy_url');
+  document.getElementById('btn-generate-report').textContent = i18n.t('topbar.report');
+  document.getElementById('btn-scenarios').textContent = i18n.t('topbar.scenarios') + ' ▾';
+  
+  // Results
+  document.querySelectorAll('.section-title')[0].textContent = i18n.t('results.chart_title');
+  document.querySelectorAll('.section-title')[1].textContent = i18n.t('results.stats_title');
+  const breakdownTitle = document.querySelector('#breakdown-section .section-title');
+  if (breakdownTitle) breakdownTitle.textContent = i18n.t('results.breakdown_title');
+  
+  document.getElementById('btn-log-scale').textContent = i18n.t('results.log_scale');
+  document.getElementById('btn-linear-scale').textContent = i18n.t('results.linear_scale');
+  document.getElementById('btn-export-png').textContent = i18n.t('export.png');
+  document.getElementById('btn-export-svg').textContent = i18n.t('export.svg');
+  
+  // Scenarios dropdown
+  document.getElementById('btn-new-scenario').textContent = '+ ' + i18n.t('scenarios.new');
+  document.getElementById('btn-load-examples').textContent = i18n.t('scenarios.load_examples');
+  document.getElementById('btn-clear-examples').textContent = i18n.t('scenarios.clear_examples');
+  document.getElementById('btn-export-json').textContent = i18n.t('scenarios.export_json');
+  document.getElementById('btn-import-json').textContent = i18n.t('scenarios.import_json');
+  
+  // Settings modal
+  document.getElementById('settings-title').textContent = i18n.t('topbar.settings');
+  document.querySelector('.setting-label').firstChild.textContent = 'PERT Lambda (λ)'; // Keep λ as it's a math symbol
+  
+  // Responsive toggle
+  const toggleBtns = document.querySelectorAll('.toggle-btn');
+  if (toggleBtns.length >= 2) {
+    toggleBtns[0].textContent = i18n.t('responsive.inputs_label');
+    toggleBtns[1].textContent = i18n.t('responsive.results_label');
+  }
+
+  // Skip nav
+  document.getElementById('skip-nav').textContent = i18n.t('skip_nav');
 }
 
 /**
@@ -305,11 +405,11 @@ function renderStats(stats) {
   statsCards.innerHTML = '';
 
   const metrics = [
-    { label: 'Minimum', value: stats.min },
-    { label: 'Mean', value: stats.mean },
-    { label: 'Median', value: stats.median },
-    { label: '90th Percentile', value: stats.p90 },
-    { label: 'Maximum', value: stats.max }
+    { label: i18n.t('results.stats.min'), value: stats.min },
+    { label: i18n.t('results.stats.mean'), value: stats.mean },
+    { label: i18n.t('results.stats.median'), value: stats.median },
+    { label: i18n.t('results.stats.p90'), value: stats.p90 },
+    { label: i18n.t('results.stats.max'), value: stats.max }
   ];
 
   metrics.forEach(metric => {
@@ -361,7 +461,7 @@ function renderExceedanceCurve(sortedALE, stats) {
     dataPoints.push([sourceData[sourceData.length - 1], 0]);
   }
 
-  const scaleLabel = useLogScale ? 'Annual Loss — Log Scale ($)' : 'Annual Loss ($)';
+  const scaleLabel = useLogScale ? `${i18n.t('results.axis.x')} — Log Scale` : i18n.t('results.axis.x');
 
   const option = {
     backgroundColor: 'transparent',
@@ -390,7 +490,7 @@ function renderExceedanceCurve(sortedALE, stats) {
     },
     yAxis: {
       type: 'value',
-      name: 'Probability of Exceedance',
+      name: i18n.t('results.axis.y'),
       nameLocation: 'middle',
       nameGap: 50,
       min: 0,
@@ -431,13 +531,13 @@ function renderExceedanceCurve(sortedALE, stats) {
           },
           data: [
             [{
-              name: 'Median',
+              name: i18n.t('results.stats.median'),
               xAxis: stats.median,
               yAxis: 'max',
               label: {
                 show: true,
                 position: 'start',
-                formatter: () => `Median: ${i18n.formatCompactCurrency(stats.median)}`,
+                formatter: () => `${i18n.t('results.stats.median')}: ${i18n.formatCompactCurrency(stats.median)}`,
                 fontSize: 11,
                 padding: [3, 6],
                 backgroundColor: 'rgba(124, 232, 140, 0.85)',
@@ -453,13 +553,13 @@ function renderExceedanceCurve(sortedALE, stats) {
               lineStyle: { color: '#7ce88c' }
             }],
             [{
-              name: '90th Percentile',
+              name: i18n.t('results.stats.p90'),
               xAxis: stats.p90,
               yAxis: 0.5,
               label: {
                 show: true,
                 position: 'start',
-                formatter: () => `90th: ${i18n.formatCompactCurrency(stats.p90)}`,
+                formatter: () => `${i18n.t('results.stats.p90')}: ${i18n.formatCompactCurrency(stats.p90)}`,
                 fontSize: 11,
                 padding: [3, 6],
                 backgroundColor: 'rgba(232, 124, 124, 0.85)',
@@ -487,24 +587,30 @@ function renderExceedanceCurve(sortedALE, stats) {
  * Render category breakdown as pure CSS bars + table (no ECharts)
  */
 function renderCategoryBreakdown(breakdown) {
-  const categories = Object.entries(breakdown)
-    .sort((a, b) => b[1] - a[1])
-    .map(([cat, value]) => ({ category: cat, value }));
+  const lmMean = breakdown.lm || 1;
+  
+  // Filter to show only the most granular nodes available to avoid double-counting
+  // If children are present, don't show the parent.
+  const categoriesToShow = Object.keys(breakdown).filter(id => {
+    if (id === 'lm') return false; // Don't show the total itself in the breakdown rows
+    if (id === 'primary' && (breakdown.productivity || breakdown.response || breakdown.replacement)) return false;
+    if (id === 'slm' && (breakdown.reputation || breakdown.competitive || breakdown.fines)) return false;
+    if (id === 'secondary' && breakdown.slm) return false;
+    return true;
+  });
+
+  const categories = categoriesToShow
+    .map(id => ({ category: id, value: breakdown[id] }))
+    .sort((a, b) => b.value - a.value);
 
   const maxValue = categories.length > 0 ? categories[0].value : 1;
-  const total = categories.reduce((sum, c) => sum + c.value, 0);
-
-  const colors = [
-    'var(--accent-blue)', 'var(--accent-purple)', 'var(--accent-green)',
-    'var(--accent-yellow)', 'var(--accent-red)'
-  ];
 
   // Render bars + table combined
   const tableBody = document.getElementById('breakdown-table');
   tableBody.innerHTML = '';
 
   categories.forEach((item, idx) => {
-    const pct = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
+    const pct = ((item.value / lmMean) * 100).toFixed(1);
     const barWidth = maxValue > 0 ? ((item.value / maxValue) * 100).toFixed(1) : '0';
     const color = colors[idx % colors.length];
     const name = formatCategoryName(item.category);
@@ -529,18 +635,7 @@ function renderCategoryBreakdown(breakdown) {
  * Format category name for display
  */
 function formatCategoryName(category) {
-  const nameMap = {
-    productivity: 'Productivity',
-    response: 'Response',
-    replacement: 'Replacement',
-    reputation: 'Reputation',
-    competitive: 'Competitive Advantage',
-    fines: 'Fines & Judgments',
-    primary: 'Primary Loss',
-    secondary: 'Secondary Loss',
-    slm: 'Secondary Loss Magnitude'
-  };
-  return nameMap[category] || category;
+  return i18n.t(`factor.${category}`);
 }
 
 /**
@@ -630,15 +725,21 @@ function renderScenariosList() {
     const nameEl = document.createElement('span');
     nameEl.className = 'scenario-name';
     nameEl.textContent = scenario.name;
-    nameEl.addEventListener('click', () => loadScenario(scenario.id));
 
-    // Add example badge if this is an example scenario
+    // For example scenarios, find the scenario index and check for tutorial
+    let scenarioIndex = -1;
     if (isExample) {
+      scenarioIndex = EXAMPLE_SCENARIOS.findIndex(s => s.name === scenario.name);
+
+      // Add example badge
       const badge = document.createElement('span');
       badge.className = 'example-badge';
       badge.textContent = 'Example';
       nameEl.appendChild(document.createTextNode(' '));
       nameEl.appendChild(badge);
+    } else {
+      // Non-example scenarios use single-click to load
+      nameEl.addEventListener('click', () => loadScenario(scenario.id));
     }
 
     const deleteBtn = document.createElement('button');
@@ -657,6 +758,35 @@ function renderScenariosList() {
     });
 
     item.appendChild(nameEl);
+
+    // For example scenarios, add Load and Tutorial buttons
+    if (isExample && scenarioIndex !== -1) {
+      const buttonsDiv = document.createElement('div');
+      buttonsDiv.className = 'scenario-buttons';
+
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'btn-small';
+      loadBtn.textContent = 'Load';
+      loadBtn.addEventListener('click', () => loadScenario(scenario.id));
+      buttonsDiv.appendChild(loadBtn);
+
+      // Only show Tutorial button if tutorial exists for this scenario
+      if (hasTutorial(scenarioIndex)) {
+        const tutorialBtn = document.createElement('button');
+        tutorialBtn.className = 'btn-small';
+        tutorialBtn.textContent = 'Tutorial';
+        tutorialBtn.addEventListener('click', () => {
+          const tutorialId = getTutorialIdByScenarioIndex(scenarioIndex);
+          if (tutorialId) {
+            startTutorial(tutorialId);
+          }
+        });
+        buttonsDiv.appendChild(tutorialBtn);
+      }
+
+      item.appendChild(buttonsDiv);
+    }
+
     item.appendChild(deleteBtn);
     listEl.appendChild(item);
   });
@@ -735,11 +865,234 @@ function newScenario() {
 }
 
 /**
+ * Start a tutorial
+ */
+async function startTutorial(tutorialId, resumeChapterIndex = null, resumeStepIndex = null) {
+  try {
+    // Load tutorial data
+    const tutorialData = await getTutorial(tutorialId);
+
+    // Apply scenario directly from EXAMPLE_SCENARIOS (bypassing store)
+    const scenario = EXAMPLE_SCENARIOS[tutorialData.scenarioIndex];
+    if (!scenario) {
+      throw new Error(`Scenario not found at index ${tutorialData.scenarioIndex}`);
+    }
+
+    document.getElementById('scenario-name').value = scenario.name;
+    document.getElementById('iterations-input').value = scenario.iterations || 10000;
+
+    if (scenario.inputMode) {
+      treeUI.setInputMode(scenario.inputMode);
+      updateInputModeButton(scenario.inputMode);
+    }
+
+    treeUI.setState(scenario.factors);
+    runSimulation();
+
+    // Snapshot current state for reset functionality
+    const originalState = treeUI.getState();
+
+    // Add tutorial-mode class to app
+    document.getElementById('app').classList.add('tutorial-mode');
+
+    // Create TutorialEngine
+    tutorialEngine = new TutorialEngine(tutorialData, originalState);
+
+    // Wire events
+    tutorialEngine.on('step-change', async (stepData) => {
+      await treeUI.setTutorialUI(stepData, i18n);
+
+      // Update chapter bar to reflect new step
+      renderTutorialChapterBar(stepData);
+
+      // Handle expand action
+      if (stepData.action === 'expand' && stepData.factorId !== 'risk') {
+        const factorState = getFactorState(treeUI.getState(), stepData.factorId);
+        if (factorState && !factorState.expanded) {
+          treeUI.toggleExpand(stepData.factorId);
+        }
+      }
+    });
+
+    tutorialEngine.on('chapter-change', (chapterData) => {
+      // Mobile: auto-switch to Results view for Chapter 4
+      if (chapterData.chapterIndex === 3 && window.innerWidth <= 899) {
+        document.getElementById('input-panel').classList.add('mobile-hidden');
+        document.getElementById('results-panel').classList.add('mobile-visible');
+      }
+
+      // Update chapter bar
+      renderTutorialChapterBar(chapterData);
+    });
+
+    tutorialEngine.on('tutorial-end', () => {
+      stopTutorial();
+    });
+
+    // Render chapter bar
+    renderTutorialChapterBar({
+      chapterIndex: 0,
+      chapterTitle: tutorialData.chapters[0].title,
+      totalStepsInChapter: tutorialData.chapters[0].steps.length,
+      stepInChapter: 1
+    });
+
+    // Start or resume tutorial
+    if (resumeChapterIndex !== null && resumeStepIndex !== null) {
+      tutorialEngine.resumeAt(resumeChapterIndex, resumeStepIndex);
+    } else {
+      tutorialEngine.start();
+    }
+  } catch (error) {
+    console.error('Failed to start tutorial:', error);
+    alert('Failed to load tutorial. Please try again.');
+  }
+}
+
+/**
+ * Render tutorial chapter bar
+ */
+function renderTutorialChapterBar(chapterData) {
+  const inputPanel = document.getElementById('input-panel');
+
+  // Dynamically import tutorial-ui
+  import('./tutorial-ui.js').then(({ renderChapterBar }) => {
+    renderChapterBar(inputPanel, chapterData, {
+      onPrev: () => tutorialEngine.prev(),
+      onNext: () => tutorialEngine.next(),
+      onExit: () => {
+        const confirmMsg = i18n ? i18n.t('tutorial.exit_confirm') : 'Exit tutorial? Your progress will be lost.';
+        if (confirm(confirmMsg)) {
+          stopTutorial();
+        }
+      },
+      onChapterClick: (chapterIndex) => tutorialEngine.goToChapter(chapterIndex)
+    }, tutorialEngine.tutorialData, i18n);
+  });
+}
+
+/**
+ * Stop tutorial and cleanup
+ */
+function stopTutorial() {
+  if (!tutorialEngine) return;
+
+  // Clear tutorial UI
+  treeUI.clearTutorialUI();
+
+  // Remove tutorial-mode class
+  document.getElementById('app').classList.remove('tutorial-mode');
+
+  // Clear session storage
+  sessionStorage.removeItem('tutorial-progress');
+
+  // Cleanup engine
+  tutorialEngine = null;
+
+  // Reset mobile view if needed
+  document.getElementById('input-panel').classList.remove('mobile-hidden');
+  document.getElementById('results-panel').classList.remove('mobile-visible');
+}
+
+/**
+ * Helper to find factor state by ID in nested state tree
+ */
+function getFactorState(state, factorId) {
+  if (factorId === 'risk') return state.risk;
+
+  const path = getFactorPath(factorId);
+  let current = state.risk;
+
+  for (const segment of path) {
+    if (current.children && current.children[segment]) {
+      current = current.children[segment];
+    } else {
+      return null;
+    }
+  }
+
+  return current;
+}
+
+/**
+ * Get path to factor in tree
+ */
+function getFactorPath(factorId) {
+  const paths = {
+    lef: ['lef'],
+    tef: ['lef', 'tef'],
+    cf: ['lef', 'tef', 'cf'],
+    poa: ['lef', 'tef', 'poa'],
+    vuln: ['lef', 'vuln'],
+    tcap: ['lef', 'vuln', 'tcap'],
+    rs: ['lef', 'vuln', 'rs'],
+    lm: ['lm'],
+    primary: ['lm', 'primary'],
+    productivity: ['lm', 'primary', 'productivity'],
+    response: ['lm', 'primary', 'response'],
+    replacement: ['lm', 'primary', 'replacement'],
+    secondary: ['lm', 'secondary'],
+    slef: ['lm', 'secondary', 'slef'],
+    slm: ['lm', 'secondary', 'slm'],
+    reputation: ['lm', 'secondary', 'slm', 'reputation'],
+    competitive: ['lm', 'secondary', 'slm', 'competitive'],
+    fines: ['lm', 'secondary', 'slm', 'fines']
+  };
+  return paths[factorId] || [];
+}
+
+/**
+ * Show a toast notification
+ */
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'tutorial-toast';
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-secondary);
+    border: 1px solid var(--accent-purple);
+    color: var(--text-primary);
+    padding: 12px 24px;
+    border-radius: 6px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  `;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.transition = 'opacity 0.3s';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+/**
  * Load example scenarios from examples.js into localStorage
  */
 function loadExamples() {
-  EXAMPLE_SCENARIOS.forEach(example => {
-    store.save(example);
+  // Display order: CI tutorials first, then PERT scenarios.
+  // Store sorts by lastModified descending, so first items need highest timestamps.
+  const displayOrder = [
+    16, 17, // SaaS CRM outage (CI)
+    18, 19, // Legacy system compromise (CI)
+    0, 1,   // External brute force
+    2, 3,   // Ransomware outbreak
+    4, 5,   // Insider data exfiltration
+    6, 7,   // S3 bucket misconfiguration
+    8, 9,   // DDoS on public website
+    10, 11, // Phishing on back-office
+    12, 13, // Cloud KMS compromise
+    14, 15, // Physical laptop theft
+    20, 21, // Regulatory audit failure
+    22, 23  // APT IP theft
+  ];
+  const now = Date.now();
+  displayOrder.forEach((idx, i) => {
+    store.save(EXAMPLE_SCENARIOS[idx], null, now + (displayOrder.length - i));
   });
   renderScenariosList();
 }
@@ -869,12 +1222,14 @@ function copyURL() {
  * Generate plain-text analysis report stub for Word/Google Docs
  */
 function generateReport() {
-  const scenarioName = document.getElementById('scenario-name').value || 'Untitled Scenario';
+  const scenarioName = document.getElementById('scenario-name').value || i18n.t('topbar.new_scenario') || 'Untitled Scenario';
   const iterations = document.getElementById('iterations-input').value;
   const inputMode = treeUI.inputMode.toUpperCase();
-  const inputModeLabel = inputMode === 'CI' ? '2-point Confidence Interval' : '3-point PERT estimation';
+  const inputModeLabel = inputMode === 'CI' 
+    ? (i18n.t('report.mode_ci') === '[missing_report.mode_ci]' ? '2-point Confidence Interval' : i18n.t('report.mode_ci'))
+    : (i18n.t('report.mode_pert') === '[missing_report.mode_pert]' ? '3-point PERT estimation' : i18n.t('report.mode_pert'));
 
-  const date = new Date().toLocaleDateString('en-US', {
+  const date = new Date().toLocaleDateString(document.documentElement.lang, {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -882,28 +1237,34 @@ function generateReport() {
 
   const state = treeUI.getState();
 
+  const t = (key, fallback) => {
+    const val = i18n.t(key);
+    return val.startsWith('[missing_') ? fallback : val;
+  };
+
   let report = '';
-  report += 'FAIR Risk Analysis Report\n';
+  report += t('report.title', 'FAIR Risk Analysis Report') + '\n';
   report += '=========================\n';
-  report += `Scenario: ${scenarioName}\n`;
-  report += `Date: ${date}\n`;
-  report += 'Analyst: [YOUR NAME]\n';
-  report += `Input Mode: ${inputMode} (${inputModeLabel})\n`;
-  report += `Iterations: ${iterations}\n`;
+  report += `${t('report.scenario', 'Scenario')}: ${scenarioName}\n`;
+  report += `${t('report.date', 'Date')}: ${date}\n`;
+  report += `${t('report.analyst', 'Analyst: [YOUR NAME]')}\n`;
+  report += `${t('report.input_mode', 'Input Mode')}: ${inputMode} (${inputModeLabel})\n`;
+  report += `${t('report.iterations', 'Iterations')}: ${iterations}\n`;
   report += '\n';
-  report += 'EXECUTIVE SUMMARY\n';
-  report += '[Provide a brief overview of the risk scenario, key findings, and recommendations.]\n';
+  report += t('report.exec_summary', 'EXECUTIVE SUMMARY') + '\n';
+  report += t('report.exec_summary_prompt', '[Provide a brief overview of the risk scenario, key findings, and recommendations.]') + '\n';
   report += '\n';
-  report += 'FACTOR ANALYSIS\n';
+  report += t('report.factor_analysis', 'FACTOR ANALYSIS') + '\n';
   report += '===============\n';
   report += '\n';
 
   // Recursive function to walk the tree and build factor analysis section
   function walkTree(modelNode, factorState, indent = 0) {
     const indentStr = '  '.repeat(indent);
-    const label = modelNode.label;
+    const label = t(`factor.${modelNode.id}.label`, modelNode.label);
     const abbrev = modelNode.id.toUpperCase();
-    const unit = modelNode.unit;
+    const unitKey = modelNode.unit.replace('/', '_');
+    const unit = t(`input.unit_labels.${unitKey}`, modelNode.unit);
 
     report += `${indentStr}${label} (${abbrev}) — ${unit}\n`;
 
@@ -911,14 +1272,16 @@ function generateReport() {
     if (!factorState.expanded || !modelNode.children) {
       const values = formatFactorValues(factorState, unit);
       report += `${indentStr}  ${values}\n`;
-      report += `${indentStr}  [RATIONALE: Explain why these values were chosen. E.g., "..."]\n`;
+      report += `${indentStr}  ${t('report.rationale_prompt', '[RATIONALE: Explain why these values were chosen. E.g., "..."]')}\n`;
       report += '\n';
     } else {
       // Expanded composite - show description and recurse
-      if (modelNode.description) {
-        const desc = modelNode.description.split('[')[0].trim();
-        if (desc.length > 100) {
-          report += `${indentStr}  Estimated via decomposition into ${modelNode.children.map(c => c.label).join(' and ')}.\n`;
+      const description = t(`factor.${modelNode.id}.description`, modelNode.description);
+      if (description) {
+        const desc = description.split('[')[0].trim();
+        if (desc.length > 100 && modelNode.children) {
+          const childrenLabels = modelNode.children.map(c => t(`factor.${c.id}.label`, c.label)).join(` ${t('report.and', 'and')} `);
+          report += `${indentStr}  ${t('report.estimated_via', 'Estimated via decomposition into')} ${childrenLabels}.\n`;
         } else {
           report += `${indentStr}  ${desc}\n`;
         }
@@ -936,8 +1299,9 @@ function generateReport() {
   }
 
   function formatFactorValues(factorState, unit) {
+    const noValues = t('report.no_values', '[No values set]');
     if (!factorState) {
-      return '[No values set]';
+      return noValues;
     }
 
     const inputMode = treeUI.inputMode;
@@ -945,26 +1309,26 @@ function generateReport() {
 
     if (inputMode === 'ci') {
       if (factorState.low === undefined || factorState.high === undefined) {
-        return '[No values set]';
+        return noValues;
       }
       const low = formatValue(factorState.low, unit);
       const high = formatValue(factorState.high, unit);
-      values = `Low: ${low}  High: ${high}`;
+      values = `${t('input.low', 'Low:')} ${low}  ${t('input.high', 'High:')} ${high}`;
     } else {
       if (factorState.min === undefined || factorState.mode === undefined || factorState.max === undefined) {
-        return '[No values set]';
+        return noValues;
       }
       const min = formatValue(factorState.min, unit);
       const mode = formatValue(factorState.mode, unit);
       const max = formatValue(factorState.max, unit);
-      values = `Min: ${min}  Mode: ${mode}  Max: ${max}`;
+      values = `${t('input.min', 'Min:')} ${min}  ${t('input.mode', 'Mode:')} ${mode}  ${t('input.max', 'Max:')} ${max}`;
     }
 
     return values;
   }
 
   function formatValue(value, unit) {
-    if (unit === 'dollars') {
+    if (unit === 'dollars' || unit === 'دولار' || unit === 'Dólares' || unit === 'Dollar' || unit === '美元' || unit === 'ドル') {
       if (value >= 1000000000) {
         return `$${(value / 1000000000).toFixed(1)}B`;
       } else if (value >= 1000000) {
@@ -974,7 +1338,7 @@ function generateReport() {
       } else {
         return `$${value}`;
       }
-    } else if (unit === 'probability') {
+    } else if (unit === 'probability' || unit === 'احتمالية' || unit === 'Probabilidad' || unit === 'Probabilité' || unit === 'Wahrscheinlichkeit' || unit === 'Kans' || unit === '確率' || unit === '概率') {
       return value.toFixed(2);
     } else if (unit === 'score') {
       return value.toFixed(0);
@@ -989,28 +1353,27 @@ function generateReport() {
   // Add simulation results if available
   if (lastSimResults && lastSimResults.stats) {
     const stats = lastSimResults.stats;
-    report += 'SIMULATION RESULTS\n';
+    report += t('report.sim_results', 'SIMULATION RESULTS') + '\n';
     report += '==================\n';
-    report += `Mean ALE: ${i18n.formatCompactCurrency(stats.mean)}\n`;
-    report += `Median ALE: ${i18n.formatCompactCurrency(stats.median)}\n`;
-    report += `90th Percentile: ${i18n.formatCompactCurrency(stats.p90)}\n`;
-    report += `Minimum: ${i18n.formatCompactCurrency(stats.min)}\n`;
-    report += `Maximum: ${i18n.formatCompactCurrency(stats.max)}\n`;
+    report += `${t('results.stats.mean', 'Mean')} ALE: ${i18n.formatCompactCurrency(stats.mean)}\n`;
+    report += `${t('results.stats.median', 'Median')} ALE: ${i18n.formatCompactCurrency(stats.median)}\n`;
+    report += `${t('results.stats.p90', '90th Percentile')}: ${i18n.formatCompactCurrency(stats.p90)}\n`;
+    report += `${t('results.stats.min', 'Minimum')}: ${i18n.formatCompactCurrency(stats.min)}\n`;
+    report += `${t('results.stats.max', 'Maximum')}: ${i18n.formatCompactCurrency(stats.max)}\n`;
     report += '\n';
   }
 
   // Add methodology section
-  report += 'METHODOLOGY\n';
+  report += t('report.methodology', 'METHODOLOGY') + '\n';
   report += '===========\n';
-  report += `This analysis uses the Factor Analysis of Information Risk (FAIR)\n`;
-  report += `framework with Monte Carlo simulation (${iterations} iterations) using\n`;
+  report += `${t('report.method_desc_1', 'This analysis uses the Factor Analysis of Information Risk (FAIR) framework with Monte Carlo simulation')} (${iterations} ${t('report.iterations', 'iterations').toLowerCase()}) ${t('report.method_desc_2', 'using')}\n`;
   if (treeUI.inputMode === 'pert') {
-    report += 'Beta-PERT distributions.\n';
+    report += t('report.method_pert', 'Beta-PERT distributions.') + '\n';
   } else {
-    report += 'uniform distributions within confidence intervals.\n';
+    report += t('report.method_ci', 'uniform distributions within confidence intervals.') + '\n';
   }
   report += '\n';
-  report += 'References:\n';
+  report += t('report.references', 'References:') + '\n';
   report += '- Open FAIR Risk Taxonomy (O-RT) v3.0.1, The Open Group Standard (C20B, 2021)\n';
   report += '  https://publications.opengroup.org/c20b\n';
   report += '- Freund & Jones, "Measuring and Managing Information Risk: A FAIR Approach" (2014)\n';

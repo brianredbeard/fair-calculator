@@ -77,7 +77,7 @@ test('FAIR model tree is complete', async () => {
   const allIds = [
     'risk', 'lef', 'tef', 'cf', 'poa', 'vuln', 'tcap', 'rs',
     'lm', 'primary', 'productivity', 'response', 'replacement',
-    'secondary', 'slef', 'slm', 'reputation', 'competitive_advantage', 'fines'
+    'secondary', 'slef', 'slm', 'reputation', 'competitive', 'fines'
   ];
   for (const id of allIds) {
     const node = FAIR.findNode(id);
@@ -92,7 +92,7 @@ test('i18n loads English locale', async () => {
   const title = i18n.t('app.title');
   assert(title === 'FAIR Calculator', `Expected 'FAIR Calculator', got ${title}`);
   const lefLabel = i18n.t('factor.lef');
-  assert(lefLabel === 'Loss Event Frequency', `Expected 'Loss Event Frequency', got ${lefLabel}`);
+  assert(lefLabel === 'Loss Event Frequency (LEF)', `Expected 'Loss Event Frequency (LEF)', got ${lefLabel}`);
 });
 
 // Test 5: Tree UI renders ARIA — tree/treeitem/aria-expanded roles present

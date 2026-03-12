@@ -36,8 +36,22 @@ export class I18n {
    * @returns {string} Translated string with interpolated parameters
    */
   t(key, params) {
-    let str = this._strings[key];
-    if (str === undefined) {
+    const parts = key.split('.');
+    let str = this._strings;
+    
+    for (const part of parts) {
+      if (str && str[part] !== undefined) {
+        str = str[part];
+      } else {
+        return `[missing_${key}]`;
+      }
+    }
+    
+    if (typeof str !== 'string' && str.label) {
+      str = str.label;
+    }
+
+    if (typeof str !== 'string') {
       return `[missing_${key}]`;
     }
 
