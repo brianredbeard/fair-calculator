@@ -95,8 +95,15 @@ Dollar shorthand: `K` = thousands, `M` = millions, `B` = billions. Leading `$` a
 
 You can enter values at whatever level of the tree you have data for. Each composite factor (one with sub-factors) has an expand/collapse toggle:
 
-- **Collapsed (default):** Enter a confidence interval directly for the composite factor. Use this when you have a direct estimate ("I think we'll see 1–10 loss events per year").
-- **Expanded:** The direct input is replaced by its sub-factor inputs. Use this when you can estimate the components more precisely than the composite ("I don't know LEF directly, but I know we had about 5–50 threat events and our vulnerability is somewhere between 10–50%").
+- **Collapsed (default):** Enter a confidence interval directly for the composite factor. Use this when you have a direct estimate ("I think we'll see 1–10 loss events per year"). This is **Stage 1 estimation** — direct assessment at the branch level.
+- **Expanded:** The direct input is replaced by its sub-factor inputs. Use this when you can estimate the components more precisely than the composite ("I don't know LEF directly, but I know we had about 5–50 threat events and our vulnerability is somewhere between 10–50%"). This is **Stage 2 estimation** — decomposed assessment using leaf factors.
+
+### Stage 1 vs. Stage 2
+
+In FAIR terminology (Open FAIR Risk Taxonomy, The Open Group Standard C13K; Freund & Jones, *Measuring and Managing Information Risk: A FAIR Approach*, 2014):
+
+- **Stage 1 (Direct Estimation):** Estimate Risk by providing values for the two top-level branches: Loss Event Frequency (LEF) and Loss Magnitude (LM). Use this when you have direct data or expert judgment about how often losses occur and how big they are. Fast and simple.
+- **Stage 2 (Decomposed Estimation):** Expand LEF into Threat Event Frequency (TEF) and Vulnerability (Vuln), and/or expand LM into Primary and Secondary loss categories. Further decompose TEF into Contact Frequency (CF) and Probability of Action (PoA), Vuln into Threat Capability (TCap) and Resistance Strength (RS), and loss categories into specific cost types (Productivity, Response, Reputation, etc.). Use this when you have more granular data or want to model the interaction between threat capability and defensive strength. More detailed and typically produces tighter, more defensible distributions.
 
 ### Decomposition Changes the Distribution
 

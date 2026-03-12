@@ -11,6 +11,7 @@ export class FactorTreeUI {
     this.container = container;
     this.modelTree = modelTree;
     this.onChange = onChange;
+    this.inputMode = 'ci'; // 'ci' or 'pert'
 
     // Initialize state with Risk expanded by default
     this.state = this._initializeState(modelTree);
@@ -114,6 +115,63 @@ export class FactorTreeUI {
   }
 
   /**
+   * Set input mode (CI or PERT) and convert all factor states
+   */
+  setInputMode(mode) {
+    if (mode !== 'ci' && mode !== 'pert') {
+      throw new Error(`Invalid inputMode: ${mode}. Must be 'ci' or 'pert'.`);
+    }
+
+    if (this.inputMode === mode) {
+      return; // Already in requested mode
+    }
+
+    this.inputMode = mode;
+
+    // Convert all leaf/collapsed factors in state
+    this._convertFactorStateRecursive(this.state, mode);
+
+    // Re-render with new input mode
+    this._render();
+    this.onChange();
+  }
+
+  /**
+   * Recursively convert factor states between CI and PERT modes
+   */
+  _convertFactorStateRecursive(stateNode, targetMode) {
+    for (const key in stateNode) {
+      const factorState = stateNode[key];
+
+      // If collapsed or leaf (has low/high or min/mode/max), convert
+      if (factorState.low !== undefined && factorState.high !== undefined) {
+        // Currently CI mode, convert to PERT
+        if (targetMode === 'pert') {
+          factorState.min = factorState.low;
+          factorState.max = factorState.high;
+          factorState.mode = (factorState.low + factorState.high) / 2;
+          delete factorState.low;
+          delete factorState.high;
+        }
+      } else if (factorState.min !== undefined && factorState.max !== undefined) {
+        // Currently PERT mode, convert to CI
+        if (targetMode === 'ci') {
+          factorState.low = factorState.min;
+          factorState.high = factorState.max;
+          delete factorState.min;
+          delete factorState.mode;
+          delete factorState.max;
+        }
+      }
+
+      // Recurse into children
+      if (factorState.children) {
+        this._convertFactorStateRecursive(factorState.children, targetMode);
+      }
+    }
+  }
+
+  /**
    * Find factor state in tree by ID
    */
   _findFactorState(factorId, stateNode = this.state) {
@@ -142,81 +200,137 @@ export class FactorTreeUI {
     const totalDefaultLow = defaultLows.reduce((s, v) => s + v, 0);
     const totalDefaultHigh = defaultHighs.reduce((s, v) => s + v, 0);
 
-    const parentLow = parentState.low || modelNode.defaultLow;
-    const parentHigh = parentState.high || modelNode.defaultHigh;
+    const isPertMode = parentState.min !== undefined;
+    const parentLow = isPertMode ? (parentState.min || modelNode.defaultLow) : (parentState.low || modelNode.defaultLow);
+    const parentHigh = isPertMode ? (parentState.max || modelNode.defaultHigh) : (parentState.high || modelNode.defaultHigh);
+    const parentMode = isPertMode ? (parentState.mode || (parentState.min + parentState.max) / 2) : (parentLow + parentHigh) / 2;
 
     modelNode.children.forEach((child, i) => {
       // For additive factors: split proportionally
       // For multiplicative factors: use defaults since splitting a product is ambiguous
       const isAdditive = this._isAdditiveFactor(modelNode.id);
 
-      let childLow, childHigh;
+      let childLow, childHigh, childMode;
       if (isAdditive && totalDefaultLow > 0 && totalDefaultHigh > 0) {
         childLow = parentLow * (defaultLows[i] / totalDefaultLow);
         childHigh = parentHigh * (defaultHighs[i] / totalDefaultHigh);
+        childMode = parentMode * ((defaultLows[i] + defaultHighs[i]) / 2) / ((totalDefaultLow + totalDefaultHigh) / 2);
         // Round to reasonable precision
         childLow = this._roundSensible(childLow);
         childHigh = this._roundSensible(childHigh);
+        childMode = this._roundSensible(childMode);
       } else {
         // Multiplicative or special factors: use model defaults
         childLow = child.defaultLow;
         childHigh = child.defaultHigh;
+        childMode = (childLow + childHigh) / 2;
       }
 
-      children[child.id] = {
-        expanded: false,
-        low: childLow,
-        high: childHigh
-      };
+      if (isPertMode) {
+        children[child.id] = {
+          expanded: false,
+          min: childLow,
+          mode: childMode,
+          max: childHigh
+        };
+      } else {
+        children[child.id] = {
+          expanded: false,
+          low: childLow,
+          high: childHigh
+        };
+      }
     });
 
     return children;
   }
 
   /**
-   * Roll up children into parent CI on collapse.
-   * Additive: sum of lows / sum of highs
-   * Multiplicative: product of lows / product of highs
+   * Roll up children into parent on collapse (handles both CI and PERT modes).
+   * Additive: sum of lows/mins, highs/maxes, modes
+   * Multiplicative: product of lows/mins, highs/maxes, modes
    * Vuln (comparison): preserve the pre-expansion value via approximation
    */
   _rollUpChildren(factorId, children, modelNode) {
-    const childLows = {};
-    const childHighs = {};
+    // Detect mode from first child
+    const firstChild = Object.values(children)[0];
+    const isPertMode = firstChild && firstChild.min !== undefined;
+
+    const childMins = {};
+    const childModes = {};
+    const childMaxes = {};
+
     for (const [childId, childState] of Object.entries(children)) {
       if (childState.expanded && childState.children) {
         // Recursively roll up nested expanded children
         const childModel = modelNode.children.find(c => c.id === childId);
         const rolled = this._rollUpChildren(childId, childState.children, childModel);
-        childLows[childId] = rolled.low;
-        childHighs[childId] = rolled.high;
+        if (isPertMode) {
+          childMins[childId] = rolled.min;
+          childModes[childId] = rolled.mode;
+          childMaxes[childId] = rolled.max;
+        } else {
+          childMins[childId] = rolled.low;
+          childMaxes[childId] = rolled.high;
+        }
       } else {
-        childLows[childId] = childState.low;
-        childHighs[childId] = childState.high;
+        if (isPertMode) {
+          childMins[childId] = childState.min;
+          childModes[childId] = childState.mode;
+          childMaxes[childId] = childState.max;
+        } else {
+          childMins[childId] = childState.low;
+          childMaxes[childId] = childState.high;
+        }
       }
     }
 
     if (this._isAdditiveFactor(factorId)) {
-      return {
-        low: this._roundSensible(Object.values(childLows).reduce((s, v) => s + v, 0)),
-        high: this._roundSensible(Object.values(childHighs).reduce((s, v) => s + v, 0))
+      const result = {
+        low: this._roundSensible(Object.values(childMins).reduce((s, v) => s + v, 0)),
+        high: this._roundSensible(Object.values(childMaxes).reduce((s, v) => s + v, 0))
       };
+      if (isPertMode) {
+        result.min = result.low;
+        result.max = result.high;
+        result.mode = this._roundSensible(Object.values(childModes).reduce((s, v) => s + v, 0));
+        delete result.low;
+        delete result.high;
+      }
+      return result;
     } else if (factorId === 'vuln') {
       // Vuln comparison: approximate from TCap/RS overlap
-      const tcapLow = childLows.tcap, tcapHigh = childHighs.tcap;
-      const rsLow = childLows.rs, rsHigh = childHighs.rs;
+      const tcapMin = childMins.tcap, tcapMax = childMaxes.tcap;
+      const rsMin = childMins.rs, rsMax = childMaxes.rs;
       // Rough probability that TCap > RS given the ranges
-      const lowEstimate = Math.max(0.01, Math.min(1, (tcapLow - rsHigh) / (tcapHigh - rsLow + 1)));
-      const highEstimate = Math.max(0.01, Math.min(1, (tcapHigh - rsLow) / (tcapHigh - rsLow + 1)));
-      return {
+      const lowEstimate = Math.max(0.01, Math.min(1, (tcapMin - rsMax) / (tcapMax - rsMin + 1)));
+      const highEstimate = Math.max(0.01, Math.min(1, (tcapMax - rsMin) / (tcapMax - rsMin + 1)));
+      const result = {
         low: this._roundSensible(Math.max(0.01, Math.min(lowEstimate, highEstimate))),
         high: this._roundSensible(Math.min(1, Math.max(lowEstimate, highEstimate)))
       };
+      if (isPertMode) {
+        result.min = result.low;
+        result.max = result.high;
+        result.mode = this._roundSensible((result.low + result.high) / 2);
+        delete result.low;
+        delete result.high;
+      }
+      return result;
     } else {
-      // Multiplicative: product of lows / product of highs
-      return {
-        low: this._roundSensible(Object.values(childLows).reduce((s, v) => s * v, 1)),
-        high: this._roundSensible(Object.values(childHighs).reduce((s, v) => s * v, 1))
+      // Multiplicative: product of lows/mins, highs/maxes, modes
+      const result = {
+        low: this._roundSensible(Object.values(childMins).reduce((s, v) => s * v, 1)),
+        high: this._roundSensible(Object.values(childMaxes).reduce((s, v) => s * v, 1))
       };
+      if (isPertMode) {
+        result.min = result.low;
+        result.max = result.high;
+        result.mode = this._roundSensible(Object.values(childModes).reduce((s, v) => s * v, 1));
+        delete result.low;
+        delete result.high;
+      }
+      return result;
     }
   }
 
@@ -332,7 +446,7 @@ export class FactorTreeUI {
     const toggleAllBtn = document.createElement('button');
     toggleAllBtn.className = 'btn-small btn-expand-all';
     toggleAllBtn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
-    toggleAllBtn.setAttribute('aria-label', allExpanded ? 'Collapse all factors' : 'Expand all factors');
+    toggleAllBtn.setAttribute('aria-label', allExpanded ? 'Collapse all factors' : 'Expand all factors (Stage 2: full decomposition)');
     toggleAllBtn.addEventListener('click', () => {
       if (this._hasExpandedFactors()) {
         this.collapseAll();
@@ -437,6 +551,10 @@ export class FactorTreeUI {
       // Render CI input row
       const inputRow = this._createInputRow(factorId, factorState, modelNode);
       itemEl.appendChild(inputRow);
+    } else if (factorState.min !== undefined && factorState.max !== undefined) {
+      // Render PERT input row
+      const inputRow = this._createPertInputRow(factorId, factorState, modelNode);
+      itemEl.appendChild(inputRow);
     }
 
     parentEl.appendChild(itemEl);
@@ -482,6 +600,67 @@ export class FactorTreeUI {
       this._handleInputChange(factorId, 'high', e.target.value, modelNode.unit, e.target);
     });
     rowEl.appendChild(highInputEl);
+
+    return rowEl;
+  }
+
+  /**
+   * Create PERT input row for a factor (min/mode/max)
+   */
+  _createPertInputRow(factorId, factorState, modelNode) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'pert-input-row';
+
+    // Min input
+    const minLabelEl = document.createElement('span');
+    minLabelEl.className = 'pert-label';
+    minLabelEl.textContent = 'Min:';
+    rowEl.appendChild(minLabelEl);
+
+    const minInputEl = document.createElement('input');
+    minInputEl.type = 'text';
+    minInputEl.className = 'pert-input';
+    minInputEl.setAttribute('data-bound', 'min');
+    minInputEl.setAttribute('aria-label', `${modelNode.label} min`);
+    minInputEl.value = this._formatValue(factorState.min, modelNode.unit);
+    minInputEl.addEventListener('change', (e) => {
+      this._handleInputChange(factorId, 'min', e.target.value, modelNode.unit, e.target);
+    });
+    rowEl.appendChild(minInputEl);
+
+    // Mode input
+    const modeLabelEl = document.createElement('span');
+    modeLabelEl.className = 'pert-label';
+    modeLabelEl.textContent = 'Mode:';
+    rowEl.appendChild(modeLabelEl);
+
+    const modeInputEl = document.createElement('input');
+    modeInputEl.type = 'text';
+    modeInputEl.className = 'pert-input';
+    modeInputEl.setAttribute('data-bound', 'mode');
+    modeInputEl.setAttribute('aria-label', `${modelNode.label} mode`);
+    modeInputEl.value = this._formatValue(factorState.mode, modelNode.unit);
+    modeInputEl.addEventListener('change', (e) => {
+      this._handleInputChange(factorId, 'mode', e.target.value, modelNode.unit, e.target);
+    });
+    rowEl.appendChild(modeInputEl);
+
+    // Max input
+    const maxLabelEl = document.createElement('span');
+    maxLabelEl.className = 'pert-label';
+    maxLabelEl.textContent = 'Max:';
+    rowEl.appendChild(maxLabelEl);
+
+    const maxInputEl = document.createElement('input');
+    maxInputEl.type = 'text';
+    maxInputEl.className = 'pert-input';
+    maxInputEl.setAttribute('data-bound', 'max');
+    maxInputEl.setAttribute('aria-label', `${modelNode.label} max`);
+    maxInputEl.value = this._formatValue(factorState.max, modelNode.unit);
+    maxInputEl.addEventListener('change', (e) => {
+      this._handleInputChange(factorId, 'max', e.target.value, modelNode.unit, e.target);
+    });
+    rowEl.appendChild(maxInputEl);
 
     return rowEl;
   }
@@ -548,12 +727,38 @@ export class FactorTreeUI {
       isValid = false;
     }
 
-    // Validate: low <= high
+    // Validate: low <= high (CI mode)
     if (bound === 'low' && factorState.high !== undefined && value > factorState.high) {
       isValid = false;
     }
     if (bound === 'high' && factorState.low !== undefined && value < factorState.low) {
       isValid = false;
+    }
+
+    // Validate: min <= mode <= max (PERT mode)
+    if (bound === 'min') {
+      if (factorState.mode !== undefined && value > factorState.mode) {
+        isValid = false;
+      }
+      if (factorState.max !== undefined && value > factorState.max) {
+        isValid = false;
+      }
+    }
+    if (bound === 'mode') {
+      if (factorState.min !== undefined && value < factorState.min) {
+        isValid = false;
+      }
+      if (factorState.max !== undefined && value > factorState.max) {
+        isValid = false;
+      }
+    }
+    if (bound === 'max') {
+      if (factorState.min !== undefined && value < factorState.min) {
+        isValid = false;
+      }
+      if (factorState.mode !== undefined && value < factorState.mode) {
+        isValid = false;
+      }
     }
 
     if (!isValid) {

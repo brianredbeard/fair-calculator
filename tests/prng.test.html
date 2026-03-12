@@ -12,7 +12,9 @@ import {
   canonicalJsonStringify,
   createPRNG,
   lognormalParams,
-  sampleLognormal
+  sampleLognormal,
+  pertParams,
+  samplePERT
 } from '../js/prng.js';
 
 const results = [];
@@ -139,6 +141,74 @@ test('sampleLognormal with clamp constrains to [0, max]', () => {
   for (let i = 0; i < 1000; i++) {
     const sample = sampleLognormal(rng, mu, sigma, max);
     assert(sample >= 0 && sample <= max, `Clamped sample ${sample} should be in [0, ${max}]`);
+  }
+});
+
+// pertParams tests
+test('pertParams computes correct alpha and beta for known inputs', () => {
+  const { alpha, beta, min, max } = pertParams(10, 50, 100, 4);
+  // alpha = 1 + 4*(50-10)/(100-10) = 1 + 4*40/90 = 1 + 1.7778 = 2.7778
+  // beta = 1 + 4*(100-50)/(100-10) = 1 + 4*50/90 = 1 + 2.2222 = 3.2222
+  assertClose(alpha, 2.7778, 0.0001, 'alpha should be approximately 2.7778');
+  assertClose(beta, 3.2222, 0.0001, 'beta should be approximately 3.2222');
+  assertEqual(min, 10, 'min should be preserved');
+  assertEqual(max, 100, 'max should be preserved');
+});
+
+test('pertParams with lambda=4 (default)', () => {
+  const { alpha, beta } = pertParams(0, 0.5, 1);
+  // alpha = 1 + 4*(0.5-0)/(1-0) = 1 + 2 = 3
+  // beta = 1 + 4*(1-0.5)/(1-0) = 1 + 2 = 3
+  assertClose(alpha, 3, 0.0001, 'alpha should be 3');
+  assertClose(beta, 3, 0.0001, 'beta should be 3 (symmetric)');
+});
+
+// samplePERT tests
+test('samplePERT produces samples within [min, max]', () => {
+  const rng = createPRNG(111);
+  const min = 10, mode = 50, max = 100;
+  for (let i = 0; i < 1000; i++) {
+    const sample = samplePERT(rng, min, mode, max, 4);
+    assert(sample >= min && sample <= max, `Sample ${sample} should be in [${min}, ${max}]`);
+  }
+});
+
+test('samplePERT mean converges to analytical mean within 5%', () => {
+  const rng = createPRNG(222);
+  const min = 10, mode = 50, max = 100, lambda = 4;
+  const samples = Array.from({ length: 50000 }, () => samplePERT(rng, min, mode, max, lambda));
+  const mean = samples.reduce((sum, x) => sum + x, 0) / samples.length;
+  const expected = (min + lambda * mode + max) / (lambda + 2);
+  // Expected: (10 + 4*50 + 100) / 6 = 310/6 = 51.6667
+  const tolerance = expected * 0.05;
+  assertClose(mean, expected, tolerance, `Mean should be approximately ${expected}`);
+});
+
+test('samplePERT with higher lambda produces tighter concentration', () => {
+  const rng1 = createPRNG(333);
+  const rng2 = createPRNG(333);
+  const min = 10, mode = 50, max = 100;
+
+  const samplesLambda2 = Array.from({ length: 10000 }, () => samplePERT(rng1, min, mode, max, 2));
+  const samplesLambda8 = Array.from({ length: 10000 }, () => samplePERT(rng2, min, mode, max, 8));
+
+  const variance = (arr) => {
+    const mean = arr.reduce((sum, x) => sum + x, 0) / arr.length;
+    return arr.reduce((sum, x) => sum + (x - mean) ** 2, 0) / arr.length;
+  };
+
+  const var2 = variance(samplesLambda2);
+  const var8 = variance(samplesLambda8);
+
+  assert(var8 < var2, `Higher lambda should produce lower variance (var2=${var2}, var8=${var8})`);
+});
+
+test('samplePERT with probability factor clamps to [0, 1]', () => {
+  const rng = createPRNG(444);
+  const min = 0, mode = 0.5, max = 1;
+  for (let i = 0; i < 1000; i++) {
+    const sample = samplePERT(rng, min, mode, max, 4);
+    assert(sample >= 0 && sample <= 1, `Probability sample ${sample} should be in [0, 1]`);
   }
 });
 

@@ -191,6 +191,48 @@ test('ScenarioStore.list() sorts by lastModified descending', () => {
   localStorage.removeItem(ns);
 });
 
+// ====== ScenarioStore.removeByFlag() tests ======
+test('ScenarioStore.removeByFlag() removes only scenarios with the flag', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  const id1 = store.save({ name: 'Example 1', _isExample: true });
+  const id2 = store.save({ name: 'User Scenario' });
+  const id3 = store.save({ name: 'Example 2', _isExample: true });
+  let list = store.list();
+  assertEqual(list.length, 3, 'Should have 3 scenarios before removeByFlag');
+  store.removeByFlag('_isExample');
+  list = store.list();
+  assertEqual(list.length, 1, 'Should have 1 scenario after removeByFlag');
+  const remaining = store.load(list[0].id);
+  assertEqual(remaining.name, 'User Scenario', 'User scenario should remain');
+  assertNull(store.load(id1), 'Example 1 should be removed');
+  assertNull(store.load(id3), 'Example 2 should be removed');
+  localStorage.removeItem(ns);
+});
+
+test('ScenarioStore.removeByFlag() handles empty store', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  // Should not throw
+  store.removeByFlag('_isExample');
+  const list = store.list();
+  assertEqual(list.length, 0, 'Should have 0 scenarios after removeByFlag on empty store');
+  localStorage.removeItem(ns);
+});
+
+test('ScenarioStore.removeByFlag() handles store with no flagged scenarios', () => {
+  const ns = 'fair-test-' + Date.now();
+  const store = new ScenarioStore(ns);
+  store.save({ name: 'User 1' });
+  store.save({ name: 'User 2' });
+  let list = store.list();
+  assertEqual(list.length, 2, 'Should have 2 scenarios before removeByFlag');
+  store.removeByFlag('_isExample');
+  list = store.list();
+  assertEqual(list.length, 2, 'Should still have 2 scenarios (none removed)');
+  localStorage.removeItem(ns);
+});
+
 // Display results
 document.getElementById('output').textContent = results.join('\n');
 </script>

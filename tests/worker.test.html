@@ -3,7 +3,9 @@
 <head><title>Worker Tests</title></head>
 <body>
 <pre id="output"></pre>
-<script>
+<script type="module">
+import { createPRNG, samplePERT, PERT_VERSION as PRNG_PERT_VERSION } from '../js/prng.js';
+
 const testPromises = [];
 
 function test(name, fn) {
@@ -163,6 +165,51 @@ test('Worker posts error on invalid input', async () => {
   const result = await runWorker(input);
   assert(result.type === 'error', `Expected type 'error', got ${result.type}`);
   assert(typeof result.message === 'string', 'Error should have a message');
+});
+
+// Test 8: PERT implementation matches between prng.js and worker.js
+test('PERT implementation matches prng.js reference', async () => {
+  // This test verifies the pre-mortem mitigation: prng.js and worker.js have identical PERT implementations
+
+  const min = 10, mode = 50, max = 100, lambda = 4;
+  const iterations = 5000;
+
+  // Reference implementation: sample from prng.js
+  const rng = createPRNG(12345);
+  const referenceSamples = Array.from({ length: iterations }, () => samplePERT(rng, min, mode, max, lambda));
+  const referenceMean = referenceSamples.reduce((sum, x) => sum + x, 0) / iterations;
+
+  // Worker implementation: send PERT-mode factors
+  const input = {
+    iterations,
+    seed: 12345,
+    factors: {
+      risk: {
+        expanded: false,
+        min,
+        mode,
+        max
+      }
+    },
+    settings: {
+      pertLambda: lambda
+    }
+  };
+
+  const result = await runWorker(input);
+  assert(result.type === 'results', `Expected type 'results', got ${result.type}`);
+  assert(Array.isArray(result.sortedALE), 'Result should have sortedALE array');
+  assert(result.sortedALE.length === iterations, `Expected ${iterations} samples`);
+
+  // Compare worker mean to reference mean (5% tolerance)
+  const tolerance = 0.05;
+  const diff = Math.abs(result.stats.mean - referenceMean);
+  const relativeError = diff / referenceMean;
+  assert(relativeError < tolerance, `Worker mean ${result.stats.mean} differs from reference ${referenceMean} by ${(relativeError * 100).toFixed(2)}% (> ${tolerance * 100}% tolerance)`);
+
+  // Verify PERT_VERSION constant exists
+  assert(typeof PRNG_PERT_VERSION === 'number', 'PERT_VERSION should be defined in prng.js');
+  assert(PRNG_PERT_VERSION === 1, 'PERT_VERSION should be 1');
 });
 
 Promise.all(testPromises).then(results => {

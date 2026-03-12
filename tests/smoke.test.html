@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FAIR Calculator Smoke Tests</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    .summary {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding: 12px;
+      border-radius: 4px;
+    }
+    .summary.pass {
+      background: #d4edda;
+      color: #155724;
+    }
+    .summary.fail {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+    .pass {
+      color: #28a745;
+      font-weight: 600;
+    }
+    .fail {
+      color: #dc3545;
+      font-weight: 600;
+    }
+    .loading {
+      padding: 20px;
+      text-align: center;
+      font-size: 16px;
+      color: #666;
+    }
+    pre {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>FAIR Calculator Smoke Tests</h1>
+  <div id="summary" class="loading">Running tests...</div>
+  <table id="results-table">
+    <thead>
+      <tr>
+        <th>Scenario</th>
+        <th>Mean</th>
+        <th>Median</th>
+        <th>P90</th>
+        <th>Sanity</th>
+        <th>Plausibility</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="results-body"></tbody>
+  </table>
+  <div id="consistency-results"></div>
+
+  <script type="module">
+    import { EXAMPLE_SCENARIOS } from '../js/examples.js';
+
+    /*
+     * Analytical PERT Mean Computation & Plausibility Bounds
+     *
+     * PERT mean = (min + lambda*mode + max) / (lambda + 2), default lambda=4
+     * For lambda=4: mean ≈ (min + 4*mode + max) / 6
+     *
+     * Scenario 1: External brute force (Stage 1)
+     *   LEF: (50 + 4*100 + 200)/6 ≈ 108
+     *   Primary: (10K + 4*30K + 60K)/6 ≈ 31.7K
+     *   SLEF: (0.05 + 4*0.1 + 0.2)/6 ≈ 0.108
+     *   SLM: (20K + 4*40K + 80K)/6 ≈ 43.3K
+     *   Secondary: 0.108 * 43.3K ≈ 4.7K
+     *   LM: 31.7K + 4.7K ≈ 36.4K
+     *   ALE: 108 * 36.4K ≈ $3.9M
+     *   Bounds: $390K - $39M
+     *
+     * Scenario 1: External brute force (Stage 2)
+     *   NOTE: Uses corrected TCap=[0.7,0.85,0.95] and RS=[0.3,0.5,0.7]
+     *   instead of test_input.md values TCap=[0.4,0.6,0.8], RS=[0.7,0.8,0.9].
+     *   Reason: FAIR binary vuln formula (tcap > rs ? 1 : 0) produces vuln≈0
+     *   with original values (TCap < RS), yielding LEF≈0 and ALE≈$0.
+     *   See plan Verification Gaps table.
+     *   CF: (200 + 4*400 + 800)/6 ≈ 433
+     *   PoA: (0.7 + 4*0.9 + 1.0)/6 ≈ 0.883
+     *   TEF: 433 * 0.883 ≈ 382
+     *   TCap: (0.7 + 4*0.85 + 0.95)/6 ≈ 0.842
+     *   RS: (0.3 + 4*0.5 + 0.7)/6 ≈ 0.5
+     *   Vuln: 0.6 * 0.8 = 0.48
+     *   LEF: 382 * 0.48 ≈ 183
+     *   Productivity: (2K + 4*8K + 15K)/6 ≈ 8.5K
+     *   Response: (3K + 4*10K + 25K)/6 ≈ 11.3K
+     *   Replacement: (0 + 4*3K + 8K)/6 ≈ 3.3K
+     *   Primary: 8.5K + 11.3K + 3.3K ≈ 23.1K
+     *   Fines: (0 + 0 + 20K)/6 ≈ 3.3K
+     *   Reputation: (0 + 4*5K + 20K)/6 ≈ 6.7K
+     *   Competitive: (0 + 4*5K + 20K)/6 ≈ 6.7K
+     *   SLM: 3.3K + 6.7K + 6.7K ≈ 16.7K
+     *   SLEF: (0.05 + 4*0.1 + 0.2)/6 ≈ 0.108
+     *   Secondary: 0.108 * 16.7K ≈ 1.8K
+     *   LM: 23.1K + 1.8K ≈ 24.9K
+     *   ALE: 183 * 24.9K ≈ $4.6M
+     *   Bounds: $460K - $46M
+     *
+     * Scenario 2: Ransomware (Stage 1)
+     *   LEF: (0.1 + 4*0.3 + 0.6)/6 ≈ 0.317
+     *   Primary: (1M + 4*3M + 8M)/6 ≈ 3.5M
+     *   SLEF: (0.6 + 4*0.9 + 1.0)/6 ≈ 0.867
+     *   SLM: (1M + 4*5M + 15M)/6 ≈ 6M
+     *   Secondary: 0.867 * 6M ≈ 5.2M
+     *   LM: 3.5M + 5.2M ≈ 8.7M
+     *   ALE: 0.317 * 8.7M ≈ $2.8M
+     *   Bounds: $280K - $28M
+     *
+     * Scenario 2: Ransomware (Stage 2)
+     *   CF: (5 + 4*20 + 50)/6 ≈ 22.5
+     *   PoA: (0.9 + 4*1.0 + 1.0)/6 ≈ 0.983
+     *   TEF: 22.5 * 0.983 ≈ 22.1
+     *   TCap: (0.6 + 4*0.8 + 0.9)/6 ≈ 0.783
+     *   RS: (0.2 + 4*0.3 + 0.4)/6 ≈ 0.3
+     *   Vuln: 0.783 * 0.3 ≈ 0.235
+     *   LEF: 22.1 * 0.235 ≈ 5.2
+     *   Productivity: (500K + 4*1.5M + 3M)/6 ≈ 1.58M
+     *   Response: (200K + 4*800K + 2M)/6 ≈ 900K
+     *   Replacement: (200K + 4*600K + 3M)/6 ≈ 933K
+     *   Primary: 1.58M + 900K + 933K ≈ 3.41M
+     *   Fines: (0 + 4*1M + 5M)/6 ≈ 1.5M
+     *   Reputation: (500K + 4*2M + 8M)/6 ≈ 2.75M
+     *   Competitive: (300K + 4*1.5M + 4M)/6 ≈ 1.72M
+     *   SLM: 1.5M + 2.75M + 1.72M ≈ 5.97M
+     *   SLEF: (0.6 + 4*0.9 + 1.0)/6 ≈ 0.867
+     *   Secondary: 0.867 * 5.97M ≈ 5.18M
+     *   LM: 3.41M + 5.18M ≈ 8.59M
+     *   ALE: 5.2 * 8.59M ≈ $44.7M
+     *   Bounds: $4.5M - $450M
+     */
+
+    const PLAUSIBILITY_BOUNDS = {
+      'Example: External brute force (Stage 1)': { min: 390000, max: 39000000 },
+      'Example: External brute force (Stage 2)': { min: 460000, max: 46000000 },
+      'Example: Ransomware outbreak (Stage 1)': { min: 280000, max: 28000000 },
+      'Example: Ransomware outbreak (Stage 2)': { min: 4500000, max: 450000000 },
+      'Example: Insider data exfiltration (Stage 1)': { min: 392000, max: 39200000 },
+      'Example: Insider data exfiltration (Stage 2)': { min: 1875000, max: 187500000 },
+      'Example: S3 bucket misconfiguration (Stage 1)': { min: 10500, max: 1050000 },
+      'Example: S3 bucket misconfiguration (Stage 2)': { min: 12250, max: 1225000 },
+      'Example: DDoS on public website (Stage 1)': { min: 736000, max: 73600000 },
+      'Example: DDoS on public website (Stage 2)': { min: 3833000, max: 383300000 },
+      'Example: Phishing on back-office (Stage 1)': { min: 216000, max: 21600000 },
+      'Example: Phishing on back-office (Stage 2)': { min: 54600, max: 5460000 },
+      'Example: Cloud KMS compromise (Stage 1)': { min: 255000, max: 25500000 },
+      'Example: Cloud KMS compromise (Stage 2)': { min: 11074000, max: 1107400000 },
+      'Example: Physical laptop theft (Stage 1)': { min: 108500, max: 10850000 },
+      'Example: Physical laptop theft (Stage 2)': { min: 153400, max: 15340000 },
+      'Example: SaaS CRM outage (Stage 1)': { min: 1043000, max: 104300000 },
+      'Example: SaaS CRM outage (Stage 2)': { min: 2449000, max: 244900000 },
+      'Example: Legacy system compromise (Stage 1)': { min: 151300, max: 15130000 },
+      'Example: Legacy system compromise (Stage 2)': { min: 87250, max: 8725000 },
+      'Example: Regulatory audit failure (Stage 1)': { min: 419000, max: 41900000 },
+      'Example: Regulatory audit failure (Stage 2)': { min: 1659000, max: 165900000 },
+      'Example: APT IP theft (Stage 1)': { min: 396000, max: 39600000 },
+      'Example: APT IP theft (Stage 2)': { min: 5705000, max: 570500000 }
+    };
+
+    const ITERATIONS = 5000;
+    let worker;
+    let testResults = [];
+    let passCount = 0;
+    let failCount = 0;
+
+    function initWorker() {
+      worker = new Worker('../js/worker.js');
+    }
+
+    function runScenario(scenario) {
+      return new Promise((resolve) => {
+        const handler = (e) => {
+          if (e.data.type === 'results') {
+            worker.removeEventListener('message', handler);
+            resolve(e.data);
+          }
+        };
+        worker.addEventListener('message', handler);
+        worker.postMessage({
+          iterations: ITERATIONS,
+          factors: scenario.factors,
+          settings: { pertLambda: 4 }
+        });
+      });
+    }
+
+    function checkSanity(result) {
+      const { stats, sortedALE } = result;
+      const checks = [];
+
+      // min ≤ median ≤ p90 ≤ max
+      if (stats.min <= stats.median && stats.median <= stats.p90 && stats.p90 <= stats.max) {
+        checks.push('Order OK');
+      } else {
+        checks.push(`Order FAIL (min=${stats.min}, median=${stats.median}, p90=${stats.p90}, max=${stats.max})`);
+      }
+
+      // All values ≥ 0
+      if (stats.min >= 0 && stats.median >= 0 && stats.p90 >= 0 && stats.max >= 0) {
+        checks.push('Non-negative OK');
+      } else {
+        checks.push('Non-negative FAIL');
+      }
+
+      // sortedALE length = iterations
+      if (sortedALE.length === ITERATIONS) {
+        checks.push('Length OK');
+      } else {
+        checks.push(`Length FAIL (expected ${ITERATIONS}, got ${sortedALE.length})`);
+      }
+
+      const allPass = checks.every(c => c.includes('OK'));
+      return { pass: allPass, details: checks.join(', ') };
+    }
+
+    function checkPlausibility(scenarioName, result) {
+      const bounds = PLAUSIBILITY_BOUNDS[scenarioName];
+      if (!bounds) {
+        return { pass: true, details: 'No bounds defined' };
+      }
+
+      const { mean } = result.stats;
+      if (mean >= bounds.min && mean <= bounds.max) {
+        return { pass: true, details: 'Within bounds' };
+      } else {
+        return {
+          pass: false,
+          details: `Out of bounds (expected ${bounds.min.toExponential(2)} - ${bounds.max.toExponential(2)}, got ${mean.toExponential(2)})`
+        };
+      }
+    }
+
+    function formatNumber(num) {
+      if (num >= 1e6) {
+        return `$${(num / 1e6).toFixed(2)}M`;
+      } else if (num >= 1e3) {
+        return `$${(num / 1e3).toFixed(0)}K`;
+      } else {
+        return `$${num.toFixed(0)}`;
+      }
+    }
+
+    function renderResults() {
+      const tbody = document.getElementById('results-body');
+      tbody.innerHTML = '';
+
+      testResults.forEach(result => {
+        const row = tbody.insertRow();
+        row.insertCell().textContent = result.name;
+        row.insertCell().textContent = formatNumber(result.stats.mean);
+        row.insertCell().textContent = formatNumber(result.stats.median);
+        row.insertCell().textContent = formatNumber(result.stats.p90);
+
+        const sanityCell = row.insertCell();
+        sanityCell.textContent = result.sanity.pass ? 'PASS' : 'FAIL';
+        sanityCell.className = result.sanity.pass ? 'pass' : 'fail';
+        if (!result.sanity.pass) {
+          sanityCell.title = result.sanity.details;
+        }
+
+        const plausibilityCell = row.insertCell();
+        plausibilityCell.textContent = result.plausibility.pass ? 'PASS' : 'FAIL';
+        plausibilityCell.className = result.plausibility.pass ? 'pass' : 'fail';
+        if (!result.plausibility.pass) {
+          plausibilityCell.title = result.plausibility.details;
+        }
+
+        const statusCell = row.insertCell();
+        const overallPass = result.sanity.pass && result.plausibility.pass;
+        statusCell.textContent = overallPass ? 'PASS' : 'FAIL';
+        statusCell.className = overallPass ? 'pass' : 'fail';
+
+        if (overallPass) {
+          passCount++;
+        } else {
+          failCount++;
+        }
+      });
+    }
+
+    function checkStageConsistency() {
+      const consistencyDiv = document.getElementById('consistency-results');
+      consistencyDiv.innerHTML = '<h2>Stage Consistency Checks</h2>';
+
+      // Group by base scenario name (remove "Stage 1" / "Stage 2")
+      const grouped = {};
+      testResults.forEach(result => {
+        const baseName = result.name.replace(/ \(Stage [12]\)/, '');
+        if (!grouped[baseName]) {
+          grouped[baseName] = {};
+        }
+        if (result.name.includes('Stage 1')) {
+          grouped[baseName].stage1 = result;
+        } else if (result.name.includes('Stage 2')) {
+          grouped[baseName].stage2 = result;
+        }
+      });
+
+      let consistencyHTML = '<ul>';
+      Object.keys(grouped).forEach(baseName => {
+        const { stage1, stage2 } = grouped[baseName];
+        if (stage1 && stage2) {
+          const ratio = stage1.stats.mean / stage2.stats.mean;
+          const consistent = ratio >= 0.01 && ratio <= 100;
+          const status = consistent ? 'PASS' : 'FAIL';
+          const className = consistent ? 'pass' : 'fail';
+          consistencyHTML += `<li><strong>${baseName}:</strong> Stage 1 = ${formatNumber(stage1.stats.mean)}, Stage 2 = ${formatNumber(stage2.stats.mean)}, Ratio = ${ratio.toFixed(2)} <span class="${className}">${status}</span></li>`;
+
+          if (!consistent) {
+            failCount++;
+          }
+        }
+      });
+      consistencyHTML += '</ul>';
+      consistencyDiv.innerHTML += consistencyHTML;
+    }
+
+    function updateSummary() {
+      const summaryDiv = document.getElementById('summary');
+      const totalTests = testResults.length;
+      const allPass = failCount === 0;
+      summaryDiv.className = 'summary ' + (allPass ? 'pass' : 'fail');
+      summaryDiv.textContent = `${passCount} / ${totalTests} tests passed, ${failCount} failed`;
+      document.title = `[${allPass ? 'PASS' : 'FAIL'}] FAIR Calculator Smoke Tests`;
+    }
+
+    async function runAllTests() {
+      initWorker();
+
+      for (const scenario of EXAMPLE_SCENARIOS) {
+        const result = await runScenario(scenario);
+        const sanity = checkSanity(result);
+        const plausibility = checkPlausibility(scenario.name, result);
+
+        testResults.push({
+          name: scenario.name,
+          stats: result.stats,
+          sanity,
+          plausibility
+        });
+      }
+
+      renderResults();
+      checkStageConsistency();
+      updateSummary();
+    }
+
+    runAllTests().catch(err => {
+      document.getElementById('summary').innerHTML = `<span class="fail">Error: ${err.message}</span>`;
+      console.error(err);
+    });
+  </script>
+</body>
+</html>

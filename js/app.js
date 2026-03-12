@@ -1,7 +1,8 @@
 import { FAIR } from './fair-model.js';
 import { loadI18n } from './i18n.js';
 import { FactorTreeUI } from './tree-ui.js';
-import { encodeStateToHash, decodeStateFromHash, ScenarioStore } from './state.js';
+import { encodeStateToHash, decodeStateFromHash, ScenarioStore, SettingsStore } from './state.js';
+import { EXAMPLE_SCENARIOS } from './examples.js';
 
 let i18n;
 let treeUI;
@@ -11,7 +12,9 @@ let echartsCurve;
 let useLogScale = true; // Default to log scale (industry standard for FAIR)
 let lastSimResults = null; // Cache for re-rendering on scale toggle
 let currentScenarioId = null;
+let settings = {}; // Global settings (pertLambda, etc.)
 const store = new ScenarioStore();
+const settingsStore = new SettingsStore();
 
 /**
  * Initialize the application
@@ -20,13 +23,19 @@ async function init() {
   // Load i18n
   i18n = await loadI18n('en');
 
+  // Load settings
+  settings = settingsStore.load();
+  initSettingsModal();
+
   // Check URL hash for shared state
   const hash = window.location.hash.slice(1);
   let initialState = null;
+  let decodedState = null;
   if (hash) {
     const decoded = decodeStateFromHash(hash);
     if (decoded && decoded.factors) {
       initialState = decoded.factors;
+      decodedState = decoded;
       // Set scenario name if provided
       if (decoded.name) {
         document.getElementById('scenario-name').value = decoded.name;
@@ -45,6 +54,11 @@ async function init() {
   // If we have initial state from URL, restore it
   if (initialState) {
     treeUI.setState(initialState);
+    // Restore inputMode if provided (for PERT scenarios shared via URL)
+    if (decodedState.inputMode) {
+      treeUI.setInputMode(decodedState.inputMode);
+      updateInputModeButton(decodedState.inputMode);
+    }
   }
 
   // Initialize ECharts for the exceedance curve only (breakdown uses CSS bars)
@@ -56,15 +70,41 @@ async function init() {
   document.getElementById('iterations-input').addEventListener('change', onInputChange);
   document.getElementById('btn-theme').addEventListener('click', cycleTheme);
   document.getElementById('btn-copy-url').addEventListener('click', copyURL);
+  document.getElementById('btn-generate-report').addEventListener('click', generateReport);
   document.getElementById('btn-export-png').addEventListener('click', () => exportChart('png'));
   document.getElementById('btn-export-svg').addEventListener('click', () => exportChart('svg'));
   document.getElementById('btn-save-scenario').addEventListener('click', saveScenario);
   document.getElementById('btn-scenarios').addEventListener('click', toggleScenariosDropdown);
   document.getElementById('btn-new-scenario').addEventListener('click', newScenario);
+  document.getElementById('btn-load-examples').addEventListener('click', loadExamples);
+  document.getElementById('btn-clear-examples').addEventListener('click', clearExamples);
+  document.getElementById('btn-export-json').addEventListener('click', exportJSON);
+  document.getElementById('btn-import-json').addEventListener('click', importJSON);
+  document.getElementById('import-json-input').addEventListener('change', handleJSONImport);
 
   // Scale toggle
   document.getElementById('btn-log-scale').addEventListener('click', () => setScale(true));
   document.getElementById('btn-linear-scale').addEventListener('click', () => setScale(false));
+
+  // Input mode toggle
+  document.getElementById('btn-ci-mode').addEventListener('click', () => {
+    if (treeUI.inputMode !== 'ci') {
+      treeUI.setInputMode('ci');
+      updateInputModeButton('ci');
+      onInputChange();
+    }
+  });
+  document.getElementById('btn-pert-mode').addEventListener('click', () => {
+    if (treeUI.inputMode !== 'pert') {
+      treeUI.setInputMode('pert');
+      updateInputModeButton('pert');
+      onInputChange();
+    }
+  });
+
+  // Settings modal
+  document.getElementById('btn-settings').addEventListener('click', openSettingsModal);
+  document.getElementById('btn-close-settings').addEventListener('click', closeSettingsModal);
 
   // Setup responsive toggle
   setupResponsiveToggle();
@@ -140,7 +180,7 @@ function runSimulation() {
   };
 
   // Send message to worker
-  worker.postMessage({ iterations, factors });
+  worker.postMessage({ iterations, factors, settings });
 }
 
 /**
@@ -173,6 +213,88 @@ function setScale(log) {
   if (lastSimResults) {
     renderExceedanceCurve(lastSimResults.sortedALE, lastSimResults.stats);
   }
+}
+
+/**
+ * Update input mode button states (active class and aria-pressed)
+ */
+function updateInputModeButton(mode) {
+  const ciBtn = document.getElementById('btn-ci-mode');
+  const pertBtn = document.getElementById('btn-pert-mode');
+
+  if (mode === 'ci') {
+    ciBtn.classList.add('active');
+    ciBtn.setAttribute('aria-pressed', 'true');
+    pertBtn.classList.remove('active');
+    pertBtn.setAttribute('aria-pressed', 'false');
+  } else {
+    pertBtn.classList.add('active');
+    pertBtn.setAttribute('aria-pressed', 'true');
+    ciBtn.classList.remove('active');
+    ciBtn.setAttribute('aria-pressed', 'false');
+  }
+}
+
+/**
+ * Initialize settings modal controls
+ */
+function initSettingsModal() {
+  const modal = document.getElementById('settings-modal');
+  const slider = document.getElementById('lambda-slider');
+  const input = document.getElementById('lambda-input');
+
+  // Set initial values from loaded settings
+  slider.value = settings.pertLambda;
+  input.value = settings.pertLambda;
+
+  // Sync slider and input
+  slider.addEventListener('input', (e) => {
+    input.value = e.target.value;
+  });
+
+  input.addEventListener('input', (e) => {
+    slider.value = e.target.value;
+  });
+
+  // Save and re-simulate on change
+  const saveAndSimulate = () => {
+    settings.pertLambda = parseFloat(input.value);
+    settingsStore.save(settings);
+    onInputChange();
+  };
+
+  slider.addEventListener('change', saveAndSimulate);
+  input.addEventListener('change', saveAndSimulate);
+
+  // Close on Escape
+  modal.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeSettingsModal();
+    }
+  });
+
+  // Close on backdrop click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeSettingsModal();
+    }
+  });
+}
+
+/**
+ * Open settings modal
+ */
+function openSettingsModal() {
+  const modal = document.getElementById('settings-modal');
+  modal.showModal();
+}
+
+/**
+ * Close settings modal
+ */
+function closeSettingsModal() {
+  const modal = document.getElementById('settings-modal');
+  modal.close();
 }
 
 /**
@@ -428,6 +550,7 @@ function getCurrentFullState() {
   return {
     name: document.getElementById('scenario-name').value || 'Untitled Scenario',
     iterations: parseInt(document.getElementById('iterations-input').value, 10),
+    inputMode: treeUI.inputMode,
     factors: treeUI.getState()
   };
 }
@@ -481,10 +604,23 @@ function renderScenariosList() {
     emptyMsg.className = 'scenarios-empty';
     emptyMsg.textContent = 'No saved scenarios';
     listEl.appendChild(emptyMsg);
+
+    // Show Load Examples button when list is empty
+    document.getElementById('btn-load-examples').hidden = false;
+    document.getElementById('btn-clear-examples').hidden = true;
     return;
   }
 
+  let hasExamples = false;
+
   scenarios.forEach(scenario => {
+    const fullScenario = store.load(scenario.id);
+    const isExample = fullScenario && fullScenario._isExample;
+
+    if (isExample) {
+      hasExamples = true;
+    }
+
     const item = document.createElement('div');
     item.className = 'scenario-item';
     if (scenario.id === currentScenarioId) {
@@ -495,6 +631,15 @@ function renderScenariosList() {
     nameEl.className = 'scenario-name';
     nameEl.textContent = scenario.name;
     nameEl.addEventListener('click', () => loadScenario(scenario.id));
+
+    // Add example badge if this is an example scenario
+    if (isExample) {
+      const badge = document.createElement('span');
+      badge.className = 'example-badge';
+      badge.textContent = 'Example';
+      nameEl.appendChild(document.createTextNode(' '));
+      nameEl.appendChild(badge);
+    }
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'scenario-delete';
@@ -515,6 +660,10 @@ function renderScenariosList() {
     item.appendChild(deleteBtn);
     listEl.appendChild(item);
   });
+
+  // Toggle Load/Clear Examples buttons based on whether examples exist
+  document.getElementById('btn-load-examples').hidden = hasExamples;
+  document.getElementById('btn-clear-examples').hidden = !hasExamples;
 }
 
 /**
@@ -531,6 +680,13 @@ function loadScenario(id) {
   // Restore state
   document.getElementById('scenario-name').value = scenario.name || 'Untitled Scenario';
   document.getElementById('iterations-input').value = scenario.iterations || 10000;
+
+  // Set input mode if scenario specifies it (e.g., examples use 'pert')
+  if (scenario.inputMode) {
+    treeUI.setInputMode(scenario.inputMode);
+    updateInputModeButton(scenario.inputMode);
+  }
+
   treeUI.setState(scenario.factors);
 
   // Close dropdown
@@ -579,6 +735,119 @@ function newScenario() {
 }
 
 /**
+ * Load example scenarios from examples.js into localStorage
+ */
+function loadExamples() {
+  EXAMPLE_SCENARIOS.forEach(example => {
+    store.save(example);
+  });
+  renderScenariosList();
+}
+
+/**
+ * Clear all example scenarios (tagged with _isExample)
+ */
+function clearExamples() {
+  store.removeByFlag('_isExample');
+  renderScenariosList();
+}
+
+/**
+ * Export current scenario state as JSON file
+ */
+function exportJSON() {
+  const state = getCurrentFullState();
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const scenarioName = state.name || 'Untitled Scenario';
+  const sanitizedName = scenarioName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const timestamp = Date.now();
+  const filename = `${sanitizedName}_${timestamp}.json`;
+
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = url;
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Import scenario state from JSON file
+ */
+function importJSON() {
+  const input = document.getElementById('import-json-input');
+  input.click();
+}
+
+/**
+ * Handle JSON file selection and import
+ */
+function handleJSONImport(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+
+      // Validate structure
+      if (!parsed || typeof parsed !== 'object') {
+        alert('Invalid JSON file: not a valid object');
+        return;
+      }
+
+      if (!parsed.factors || typeof parsed.factors !== 'object') {
+        alert('Invalid JSON file: missing "factors" property');
+        return;
+      }
+
+      // Validate inputMode if present
+      if (parsed.inputMode && parsed.inputMode !== 'ci' && parsed.inputMode !== 'pert') {
+        alert('Invalid JSON file: inputMode must be "ci" or "pert"');
+        return;
+      }
+
+      // Restore state following the loadScenario pattern
+      if (parsed.name) {
+        document.getElementById('scenario-name').value = parsed.name;
+      }
+
+      if (parsed.iterations) {
+        document.getElementById('iterations-input').value = parsed.iterations;
+      }
+
+      if (parsed.inputMode) {
+        treeUI.setInputMode(parsed.inputMode);
+        updateInputModeButton(parsed.inputMode);
+      }
+
+      treeUI.setState(parsed.factors);
+
+      // Close dropdown
+      document.getElementById('scenarios-dropdown').hidden = true;
+
+      // Update URL and run simulation
+      updateURLHash();
+      runSimulation();
+
+    } catch (err) {
+      alert(`Failed to import JSON: ${err.message}`);
+    }
+  };
+
+  reader.readAsText(file);
+
+  // Reset input so same file can be re-imported
+  event.target.value = '';
+}
+
+/**
  * Copy shareable URL to clipboard
  */
 function copyURL() {
@@ -594,6 +863,171 @@ function copyURL() {
     console.error('Failed to copy URL:', err);
     alert('Failed to copy URL to clipboard');
   });
+}
+
+/**
+ * Generate plain-text analysis report stub for Word/Google Docs
+ */
+function generateReport() {
+  const scenarioName = document.getElementById('scenario-name').value || 'Untitled Scenario';
+  const iterations = document.getElementById('iterations-input').value;
+  const inputMode = treeUI.inputMode.toUpperCase();
+  const inputModeLabel = inputMode === 'CI' ? '2-point Confidence Interval' : '3-point PERT estimation';
+
+  const date = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  const state = treeUI.getState();
+
+  let report = '';
+  report += 'FAIR Risk Analysis Report\n';
+  report += '=========================\n';
+  report += `Scenario: ${scenarioName}\n`;
+  report += `Date: ${date}\n`;
+  report += 'Analyst: [YOUR NAME]\n';
+  report += `Input Mode: ${inputMode} (${inputModeLabel})\n`;
+  report += `Iterations: ${iterations}\n`;
+  report += '\n';
+  report += 'EXECUTIVE SUMMARY\n';
+  report += '[Provide a brief overview of the risk scenario, key findings, and recommendations.]\n';
+  report += '\n';
+  report += 'FACTOR ANALYSIS\n';
+  report += '===============\n';
+  report += '\n';
+
+  // Recursive function to walk the tree and build factor analysis section
+  function walkTree(modelNode, factorState, indent = 0) {
+    const indentStr = '  '.repeat(indent);
+    const label = modelNode.label;
+    const abbrev = modelNode.id.toUpperCase();
+    const unit = modelNode.unit;
+
+    report += `${indentStr}${label} (${abbrev}) — ${unit}\n`;
+
+    // If collapsed or leaf, show values
+    if (!factorState.expanded || !modelNode.children) {
+      const values = formatFactorValues(factorState, unit);
+      report += `${indentStr}  ${values}\n`;
+      report += `${indentStr}  [RATIONALE: Explain why these values were chosen. E.g., "..."]\n`;
+      report += '\n';
+    } else {
+      // Expanded composite - show description and recurse
+      if (modelNode.description) {
+        const desc = modelNode.description.split('[')[0].trim();
+        if (desc.length > 100) {
+          report += `${indentStr}  Estimated via decomposition into ${modelNode.children.map(c => c.label).join(' and ')}.\n`;
+        } else {
+          report += `${indentStr}  ${desc}\n`;
+        }
+      }
+      report += '\n';
+
+      // Recurse into children
+      for (const childModel of modelNode.children) {
+        const childState = factorState.children[childModel.id];
+        if (childState) {
+          walkTree(childModel, childState, indent + 1);
+        }
+      }
+    }
+  }
+
+  function formatFactorValues(factorState, unit) {
+    if (!factorState) {
+      return '[No values set]';
+    }
+
+    const inputMode = treeUI.inputMode;
+    let values = '';
+
+    if (inputMode === 'ci') {
+      if (factorState.low === undefined || factorState.high === undefined) {
+        return '[No values set]';
+      }
+      const low = formatValue(factorState.low, unit);
+      const high = formatValue(factorState.high, unit);
+      values = `Low: ${low}  High: ${high}`;
+    } else {
+      if (factorState.min === undefined || factorState.mode === undefined || factorState.max === undefined) {
+        return '[No values set]';
+      }
+      const min = formatValue(factorState.min, unit);
+      const mode = formatValue(factorState.mode, unit);
+      const max = formatValue(factorState.max, unit);
+      values = `Min: ${min}  Mode: ${mode}  Max: ${max}`;
+    }
+
+    return values;
+  }
+
+  function formatValue(value, unit) {
+    if (unit === 'dollars') {
+      if (value >= 1000000000) {
+        return `$${(value / 1000000000).toFixed(1)}B`;
+      } else if (value >= 1000000) {
+        return `$${(value / 1000000).toFixed(1)}M`;
+      } else if (value >= 1000) {
+        return `$${(value / 1000).toFixed(1)}K`;
+      } else {
+        return `$${value}`;
+      }
+    } else if (unit === 'probability') {
+      return value.toFixed(2);
+    } else if (unit === 'score') {
+      return value.toFixed(0);
+    } else {
+      return value.toString();
+    }
+  }
+
+  // Start walking from Risk root
+  walkTree(FAIR.tree, state.risk);
+
+  // Add simulation results if available
+  if (lastSimResults && lastSimResults.stats) {
+    const stats = lastSimResults.stats;
+    report += 'SIMULATION RESULTS\n';
+    report += '==================\n';
+    report += `Mean ALE: ${i18n.formatCompactCurrency(stats.mean)}\n`;
+    report += `Median ALE: ${i18n.formatCompactCurrency(stats.median)}\n`;
+    report += `90th Percentile: ${i18n.formatCompactCurrency(stats.p90)}\n`;
+    report += `Minimum: ${i18n.formatCompactCurrency(stats.min)}\n`;
+    report += `Maximum: ${i18n.formatCompactCurrency(stats.max)}\n`;
+    report += '\n';
+  }
+
+  // Add methodology section
+  report += 'METHODOLOGY\n';
+  report += '===========\n';
+  report += `This analysis uses the Factor Analysis of Information Risk (FAIR)\n`;
+  report += `framework with Monte Carlo simulation (${iterations} iterations) using\n`;
+  if (treeUI.inputMode === 'pert') {
+    report += 'Beta-PERT distributions.\n';
+  } else {
+    report += 'uniform distributions within confidence intervals.\n';
+  }
+  report += '\n';
+  report += 'References:\n';
+  report += '- Open FAIR Risk Taxonomy (O-RT), The Open Group Standard (C13K)\n';
+  report += '- Freund & Jones, "Measuring and Managing Information Risk: A FAIR Approach" (2014)\n';
+
+  // Download as .txt file
+  const blob = new Blob([report], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+
+  const sanitizedName = scenarioName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const dateStr = new Date().toISOString().split('T')[0];
+  const filename = `${sanitizedName}_report_${dateStr}.txt`;
+
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = url;
+  link.click();
+
+  URL.revokeObjectURL(url);
 }
 
 /**

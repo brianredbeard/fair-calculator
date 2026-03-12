@@ -14,7 +14,7 @@ const FAIR = (() => {
     defaultLow: 10000,
     defaultHigh: 10000000,
     tooltip: 'Annualized Loss Expectancy (ALE)',
-    description: `Risk (Annualized Loss Exposure). The probable frequency and magnitude of future loss, expressed as an annualized dollar figure. This is the top-level output: ALE = Loss Event Frequency × Loss Magnitude. Enter the 90% confidence interval for your overall estimated annual loss, or expand to decompose into LEF and LM. [${FAIR_REF}3.1; ${FAIR_BOOK}, Ch. 3]`,
+    description: `Risk (Annualized Loss Exposure). The probable frequency and magnitude of future loss, expressed as an annualized dollar figure. This is the top-level output: ALE = Loss Event Frequency × Loss Magnitude. Enter the 90% confidence interval for your overall estimated annual loss (Stage 1: direct estimation at branch level), or expand to decompose into LEF and LM and their sub-factors (Stage 2: full decomposition into leaf factors). [${FAIR_REF}3.1; ${FAIR_BOOK}, Ch. 3]`,
     children: [
       {
         id: 'lef',

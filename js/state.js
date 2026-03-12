@@ -168,4 +168,72 @@ export class ScenarioStore {
     delete all[id];
     this._writeAll(all);
   }
+
+  /**
+   * Remove all scenarios that have a specific flag set to true
+   * @param {string} flagName - Name of the flag property to check
+   */
+  removeByFlag(flagName) {
+    const all = this._readAll();
+    const filtered = {};
+
+    for (const id in all) {
+      if (!all[id][flagName]) {
+        // Keep scenarios that don't have the flag or have it set to false
+        filtered[id] = all[id];
+      }
+    }
+
+    this._writeAll(filtered);
+  }
+}
+
+/**
+ * Settings persistence (localStorage)
+ */
+export class SettingsStore {
+  constructor() {
+    this.storageKey = 'fair-calc-settings';
+  }
+
+  /**
+   * Load settings from localStorage
+   * @returns {Object} Settings object with defaults
+   */
+  load() {
+    try {
+      const stored = localStorage.getItem(this.storageKey);
+      if (!stored) {
+        return this._getDefaults();
+      }
+      const parsed = JSON.parse(stored);
+      // Merge with defaults to ensure all keys exist
+      return { ...this._getDefaults(), ...parsed };
+    } catch (e) {
+      console.warn('Failed to load settings:', e);
+      return this._getDefaults();
+    }
+  }
+
+  /**
+   * Save settings to localStorage
+   * @param {Object} settings - Settings object
+   */
+  save(settings) {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('Failed to save settings:', e);
+    }
+  }
+
+  /**
+   * Get default settings
+   * @returns {Object} Default settings
+   */
+  _getDefaults() {
+    return {
+      pertLambda: 4
+    };
+  }
 }

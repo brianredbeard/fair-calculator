@@ -346,6 +346,99 @@ function sampleLognormal(rng, mu, sigma, clampMax) {
   return sample;
 }
 
+/**
+ * Version constant for PERT implementation (must match prng.js)
+ */
+const PERT_VERSION = 1;
+
+/**
+ * Derive Beta-PERT distribution parameters
+ * @param {number} min - Minimum value
+ * @param {number} mode - Most likely value
+ * @param {number} max - Maximum value
+ * @param {number} [lambda=4] - Shape parameter (higher = more concentrated around mode)
+ * @returns {{alpha: number, beta: number, min: number, max: number}} Distribution parameters
+ */
+function pertParams(min, mode, max, lambda = 4) {
+  const range = max - min;
+  const alpha = 1 + lambda * (mode - min) / range;
+  const beta = 1 + lambda * (max - mode) / range;
+  return { alpha, beta, min, max };
+}
+
+/**
+ * Sample from gamma distribution using Marsaglia and Tsang's method
+ * @param {function(): number} rng - Random number generator
+ * @param {number} alpha - Shape parameter
+ * @returns {number} Sample from Gamma(alpha, 1)
+ */
+function sampleGamma(rng, alpha) {
+  // For alpha < 1, use transformation method
+  if (alpha < 1) {
+    const sample = sampleGamma(rng, alpha + 1);
+    return sample * Math.pow(rng(), 1 / alpha);
+  }
+
+  // Marsaglia and Tsang's method for alpha >= 1
+  const d = alpha - 1/3;
+  const c = 1 / Math.sqrt(9 * d);
+
+  while (true) {
+    let x, v;
+    do {
+      // Box-Muller for standard normal
+      let u1 = rng();
+      if (u1 === 0) u1 = 1e-10;
+      const u2 = rng();
+      x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      v = 1 + c * x;
+    } while (v <= 0);
+
+    v = v * v * v;
+    const u = rng();
+
+    if (u < 1 - 0.0331 * x * x * x * x) {
+      return d * v;
+    }
+
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) {
+      return d * v;
+    }
+  }
+}
+
+/**
+ * Sample from Beta-PERT distribution
+ * @param {function(): number} rng - Random number generator
+ * @param {number} min - Minimum value
+ * @param {number} mode - Most likely value
+ * @param {number} max - Maximum value
+ * @param {number} [lambda=4] - Shape parameter
+ * @returns {number} Sample from PERT distribution in [min, max]
+ */
+function samplePERT(rng, min, mode, max, lambda = 4) {
+  // Handle degenerate case where min == max (point mass)
+  // This happens when all three PERT values are the same (e.g., [0.001, 0.001, 0.001])
+  if (min === max) {
+    return min;
+  }
+
+  const { alpha, beta } = pertParams(min, mode, max, lambda);
+
+  // Sample from Beta(alpha, beta) using two gamma samples
+  const x = sampleGamma(rng, alpha);
+  const y = sampleGamma(rng, beta);
+  const betaSample = x / (x + y);
+
+  // Scale to [min, max]
+  let sample = min + betaSample * (max - min);
+
+  // Clamp to [min, max] as safety net
+  sample = Math.max(min, Math.min(sample, max));
+
+  return sample;
+}
+
 // --- Factor resolution ---
 
 const PROBABILITY_FACTORS = ['poa', 'vuln', 'slef'];
@@ -380,17 +473,52 @@ function validateFactor(factorId, low, high) {
   }
 }
 
-function resolveFactor(factorId, factorState, rng, categoryAccum) {
+function resolveFactor(factorId, factorState, rng, categoryAccum, settings) {
   if (!factorState.expanded || !factorState.children) {
-    // Leaf or collapsed: validate, sample from lognormal
-    const low = factorState.low;
-    const high = factorState.high;
+    // Leaf or collapsed: check for PERT or CI mode
+    let value;
 
-    validateFactor(factorId, low, high);
+    if (factorState.min !== undefined && factorState.max !== undefined) {
+      // PERT mode: sample from PERT distribution
+      const min = factorState.min;
+      const mode = factorState.mode;
+      const max = factorState.max;
+      const lambda = settings && settings.pertLambda !== undefined ? settings.pertLambda : 4;
 
-    const { mu, sigma } = lognormalParams(low, high);
-    const clampMax = isProbabilityFactor(factorId) ? 1 : undefined;
-    let value = sampleLognormal(rng, mu, sigma, clampMax);
+      // Validate PERT inputs
+      if (typeof min !== 'number' || typeof mode !== 'number' || typeof max !== 'number') {
+        throw new Error(`Factor ${factorId}: min, mode, max must be numbers`);
+      }
+      if (isNaN(min) || isNaN(mode) || isNaN(max)) {
+        throw new Error(`Factor ${factorId}: min, mode, max cannot be NaN`);
+      }
+      if (min <= 0 || mode <= 0 || max <= 0) {
+        throw new Error(`Factor ${factorId}: min, mode, max must be positive`);
+      }
+      if (min > mode || mode > max) {
+        throw new Error(`Factor ${factorId}: must have min <= mode <= max (got min=${min}, mode=${mode}, max=${max})`);
+      }
+      if (isProbabilityFactor(factorId) && max > 1) {
+        throw new Error(`Factor ${factorId}: probability max cannot exceed 1 (got ${max})`);
+      }
+
+      value = samplePERT(rng, min, mode, max, lambda);
+
+      // Clamp probability factors to [0, 1]
+      if (isProbabilityFactor(factorId)) {
+        value = Math.max(0, Math.min(value, 1));
+      }
+    } else {
+      // CI mode: sample from lognormal
+      const low = factorState.low;
+      const high = factorState.high;
+
+      validateFactor(factorId, low, high);
+
+      const { mu, sigma } = lognormalParams(low, high);
+      const clampMax = isProbabilityFactor(factorId) ? 1 : undefined;
+      value = sampleLognormal(rng, mu, sigma, clampMax);
+    }
 
     // Track in categoryAccum if this is a loss category
     if (isLossCategory(factorId) && categoryAccum) {
@@ -406,7 +534,7 @@ function resolveFactor(factorId, factorState, rng, categoryAccum) {
   // Expanded: resolve each child recursively, then FAIR.combine
   const childValues = {};
   for (const [childId, childState] of Object.entries(factorState.children)) {
-    childValues[childId] = resolveFactor(childId, childState, rng, categoryAccum);
+    childValues[childId] = resolveFactor(childId, childState, rng, categoryAccum, settings);
   }
 
   const combinedValue = FAIR.combine(factorId, childValues);
@@ -429,7 +557,7 @@ function hasExpandedLM(factors) {
 // --- Main simulation ---
 self.onmessage = function(e) {
   try {
-    const { iterations, factors } = e.data;
+    const { iterations, factors, settings } = e.data;
 
     // Derive seed from canonical input
     const canonicalInput = canonicalJsonStringify(e.data);
@@ -448,7 +576,7 @@ self.onmessage = function(e) {
     // Run iterations
     for (let i = 0; i < iterations; i++) {
       const categoryAccum = trackCategories ? {} : null;
-      const ale = resolveFactor('risk', factors.risk, rng, categoryAccum);
+      const ale = resolveFactor('risk', factors.risk, rng, categoryAccum, settings);
       ales[i] = ale;
 
       // Accumulate category totals

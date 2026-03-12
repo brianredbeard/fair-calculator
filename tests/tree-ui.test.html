@@ -224,6 +224,65 @@ test('validates low > 0 (set to "0", dispatch change event, check for input-erro
   assert(hasError, 'Expected input-error class or aria-invalid="true" for value of 0');
 });
 
+// PERT mode tests
+test('FactorTreeUI has inputMode property defaulting to "ci"', () => {
+  const tree = createTree();
+  assert(tree.inputMode === 'ci', `Expected inputMode to be "ci", got "${tree.inputMode}"`);
+});
+
+test('setInputMode to "pert" re-renders with 3 inputs per factor (min/mode/max)', () => {
+  const tree = createTree();
+  tree.setInputMode('pert');
+
+  const lefItem = container.querySelector('[data-factor-id="lef"]');
+  const inputs = lefItem.querySelectorAll('input.pert-input');
+  assert(inputs.length >= 3, `Expected at least 3 PERT inputs for LEF, got ${inputs.length}`);
+
+  const minInput = lefItem.querySelector('input[data-bound="min"]');
+  const modeInput = lefItem.querySelector('input[data-bound="mode"]');
+  const maxInput = lefItem.querySelector('input[data-bound="max"]');
+  assert(minInput !== null, 'Expected min input in PERT mode');
+  assert(modeInput !== null, 'Expected mode input in PERT mode');
+  assert(maxInput !== null, 'Expected max input in PERT mode');
+});
+
+test('switching from CI to PERT converts values (low→min, high→max, mode=(low+high)/2)', () => {
+  const tree = createTree();
+  const state = tree.getState();
+  const originalLow = state.risk.children.lef.low;
+  const originalHigh = state.risk.children.lef.high;
+
+  tree.setInputMode('pert');
+
+  const newState = tree.getState();
+  const lefState = newState.risk.children.lef;
+  assert(lefState.min === originalLow, `Expected min=${originalLow}, got ${lefState.min}`);
+  assert(lefState.max === originalHigh, `Expected max=${originalHigh}, got ${lefState.max}`);
+  assert(lefState.mode === (originalLow + originalHigh) / 2,
+    `Expected mode=${(originalLow + originalHigh) / 2}, got ${lefState.mode}`);
+  assert(lefState.low === undefined, 'Expected low to be removed in PERT mode');
+  assert(lefState.high === undefined, 'Expected high to be removed in PERT mode');
+});
+
+test('switching from PERT to CI converts values (min→low, max→high, drop mode)', () => {
+  const tree = createTree();
+  tree.setInputMode('pert');
+
+  const pertState = tree.getState();
+  const originalMin = pertState.risk.children.lef.min;
+  const originalMax = pertState.risk.children.lef.max;
+
+  tree.setInputMode('ci');
+
+  const ciState = tree.getState();
+  const lefState = ciState.risk.children.lef;
+  assert(lefState.low === originalMin, `Expected low=${originalMin}, got ${lefState.low}`);
+  assert(lefState.high === originalMax, `Expected high=${originalMax}, got ${lefState.high}`);
+  assert(lefState.min === undefined, 'Expected min to be removed in CI mode');
+  assert(lefState.max === undefined, 'Expected max to be removed in CI mode');
+  assert(lefState.mode === undefined, 'Expected mode to be removed in CI mode');
+});
+
 // Run summary
 output.textContent += `\n${passCount}/${testCount} tests passed\n`;
 if (passCount === testCount) {

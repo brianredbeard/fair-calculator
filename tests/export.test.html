@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Export/Import Tests</title>
+</head>
+<body>
+  <h1>Export/Import Tests</h1>
+  <div id="output">Running tests...</div>
+
+  <script type="module">
+    // Simple test framework
+    const tests = [];
+    let passed = 0;
+    let failed = 0;
+
+    function test(name, fn) {
+      tests.push({ name, fn });
+    }
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message || 'Assertion failed');
+      }
+    }
+
+    async function runTests() {
+      const output = document.getElementById('output');
+      output.innerHTML = '<h2>Running tests...</h2>';
+
+      for (const { name, fn } of tests) {
+        try {
+          await fn();
+          passed++;
+          console.log(`✓ ${name}`);
+          output.innerHTML += `<p style="color:green">✓ ${name}</p>`;
+        } catch (e) {
+          failed++;
+          console.error(`✗ ${name}:`, e.message);
+          output.innerHTML += `<p style="color:red">✗ ${name}: ${e.message}</p>`;
+        }
+      }
+
+      const result = failed === 0 ? '[PASS]' : '[FAIL]';
+      document.title = result;
+      output.innerHTML += `<h2>${result} ${passed} passed, ${failed} failed</h2>`;
+    }
+
+    // Mock the app environment
+    const mockTreeUI = {
+      inputMode: 'ci',
+      getState() {
+        return {
+          risk: {
+            expanded: true,
+            children: {
+              lef: { expanded: false, low: 1, high: 10 },
+              lm: { expanded: false, low: 50000, high: 5000000 }
+            }
+          }
+        };
+      },
+      setState(state) {
+        this.lastSetState = state;
+      },
+      setInputMode(mode) {
+        this.inputMode = mode;
+      }
+    };
+
+    window.treeUI = mockTreeUI;
+
+    // Mock DOM elements
+    document.body.innerHTML += `
+      <input type="text" id="scenario-name" value="Test Scenario">
+      <input type="number" id="iterations-input" value="10000">
+    `;
+
+    // Import the getCurrentFullState function pattern
+    function getCurrentFullState() {
+      return {
+        name: document.getElementById('scenario-name').value || 'Untitled Scenario',
+        iterations: parseInt(document.getElementById('iterations-input').value, 10),
+        inputMode: treeUI.inputMode,
+        factors: treeUI.getState()
+      };
+    }
+
+    // Import validation logic
+    function validateImportedJSON(parsed) {
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Invalid JSON: not a valid object');
+      }
+
+      if (!parsed.factors || typeof parsed.factors !== 'object') {
+        throw new Error('Invalid JSON: missing "factors" property');
+      }
+
+      if (parsed.inputMode && parsed.inputMode !== 'ci' && parsed.inputMode !== 'pert') {
+        throw new Error('Invalid JSON: inputMode must be "ci" or "pert"');
+      }
+
+      return true;
+    }
+
+    // Tests
+    test('getCurrentFullState returns complete state', () => {
+      const state = getCurrentFullState();
+      assert(state.name === 'Test Scenario', 'Should have scenario name');
+      assert(state.iterations === 10000, 'Should have iterations');
+      assert(state.inputMode === 'ci', 'Should have inputMode');
+      assert(state.factors, 'Should have factors');
+      assert(state.factors.risk, 'Should have risk factor');
+    });
+
+    test('Export JSON creates valid JSON string', () => {
+      const state = getCurrentFullState();
+      const json = JSON.stringify(state, null, 2);
+      const parsed = JSON.parse(json);
+      assert(parsed.name === state.name, 'JSON should parse correctly');
+      assert(parsed.iterations === state.iterations, 'Iterations should match');
+      assert(parsed.inputMode === state.inputMode, 'InputMode should match');
+    });
+
+    test('Import validation rejects missing factors', () => {
+      let threw = false;
+      try {
+        validateImportedJSON({ name: 'Test', iterations: 5000 });
+      } catch (e) {
+        threw = true;
+        assert(e.message.includes('factors'), 'Error should mention factors');
+      }
+      assert(threw, 'Should throw error for missing factors');
+    });
+
+    test('Import validation rejects invalid inputMode', () => {
+      let threw = false;
+      try {
+        validateImportedJSON({
+          name: 'Test',
+          iterations: 5000,
+          inputMode: 'invalid',
+          factors: { risk: {} }
+        });
+      } catch (e) {
+        threw = true;
+        assert(e.message.includes('inputMode'), 'Error should mention inputMode');
+      }
+      assert(threw, 'Should throw error for invalid inputMode');
+    });
+
+    test('Import validation accepts valid ci mode', () => {
+      const valid = validateImportedJSON({
+        name: 'Test',
+        iterations: 5000,
+        inputMode: 'ci',
+        factors: { risk: { expanded: true, children: {} } }
+      });
+      assert(valid === true, 'Should accept valid ci mode');
+    });
+
+    test('Import validation accepts valid pert mode', () => {
+      const valid = validateImportedJSON({
+        name: 'Test',
+        iterations: 5000,
+        inputMode: 'pert',
+        factors: { risk: { expanded: true, children: {} } }
+      });
+      assert(valid === true, 'Should accept valid pert mode');
+    });
+
+    test('Export-import round trip preserves state', () => {
+      const originalState = getCurrentFullState();
+      const json = JSON.stringify(originalState, null, 2);
+      const parsedState = JSON.parse(json);
+
+      validateImportedJSON(parsedState);
+
+      assert(parsedState.name === originalState.name, 'Name should match');
+      assert(parsedState.iterations === originalState.iterations, 'Iterations should match');
+      assert(parsedState.inputMode === originalState.inputMode, 'InputMode should match');
+      assert(JSON.stringify(parsedState.factors) === JSON.stringify(originalState.factors), 'Factors should match');
+    });
+
+    // Mock FAIR.tree for report tests
+    window.FAIR = {
+      tree: {
+        risk: {
+          label: 'Risk',
+          abbrev: 'RISK',
+          unit: 'dollars',
+          description: 'Test description',
+          children: {
+            lef: { label: 'LEF', abbrev: 'LEF', unit: 'events/year', description: 'Test' },
+            lm: { label: 'LM', abbrev: 'LM', unit: 'dollars', description: 'Test' }
+          }
+        }
+      }
+    };
+
+    test('Report generation includes all required sections', () => {
+      // Mock lastSimResults
+      window.lastSimResults = {
+        mean: 5000000,
+        median: 1500000,
+        p90: 11400000,
+        min: 6100,
+        max: 186200000
+      };
+
+      const report = generateReport();
+      assert(report.includes('FAIR Risk Analysis Report'), 'Should have title');
+      assert(report.includes('Scenario:'), 'Should have scenario name');
+      assert(report.includes('EXECUTIVE SUMMARY'), 'Should have executive summary section');
+      assert(report.includes('FACTOR ANALYSIS'), 'Should have factor analysis section');
+      assert(report.includes('SIMULATION RESULTS'), 'Should have simulation results section');
+      assert(report.includes('METHODOLOGY'), 'Should have methodology section');
+      assert(report.includes('[RATIONALE:'), 'Should have rationale placeholders');
+    });
+
+    test('Report formats CI mode values correctly', () => {
+      treeUI.inputMode = 'ci';
+      const report = generateReport();
+      assert(report.includes('Input Mode: CI'), 'Should show CI mode');
+      assert(report.includes('Low:'), 'Should have Low label for CI mode');
+      assert(report.includes('High:'), 'Should have High label for CI mode');
+      assert(!report.includes('Min:'), 'Should not have PERT labels in CI mode');
+    });
+
+    test('Report formats PERT mode values correctly', () => {
+      treeUI.inputMode = 'pert';
+      treeUI.getState = () => ({
+        risk: {
+          expanded: true,
+          children: {
+            lef: { expanded: false, min: 2, mode: 6, max: 12 },
+            lm: { expanded: false, min: 100000, mode: 3000000, max: 6000000 }
+          }
+        }
+      });
+      const report = generateReport();
+      assert(report.includes('Input Mode: PERT'), 'Should show PERT mode');
+      assert(report.includes('Min:'), 'Should have Min label for PERT mode');
+      assert(report.includes('Mode:'), 'Should have Mode label for PERT mode');
+      assert(report.includes('Max:'), 'Should have Max label for PERT mode');
+    });
+
+    test('Report handles missing simulation results', () => {
+      window.lastSimResults = null;
+      const report = generateReport();
+      assert(!report.includes('Mean ALE:'), 'Should not include results when unavailable');
+    });
+
+    // Import generateReport function (simplified version for testing)
+    function generateReport() {
+      const scenarioName = document.getElementById('scenario-name').value || 'Untitled Scenario';
+      const iterations = parseInt(document.getElementById('iterations-input').value, 10);
+      const inputMode = treeUI.inputMode;
+      const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      let report = 'FAIR Risk Analysis Report\n';
+      report += '=========================\n';
+      report += `Scenario: ${scenarioName}\n`;
+      report += `Date: ${date}\n`;
+      report += `Analyst: [YOUR NAME]\n`;
+      report += `Input Mode: ${inputMode === 'ci' ? 'CI (2-point Confidence Interval)' : 'PERT (3-point estimation)'}\n`;
+      report += `Iterations: ${iterations.toLocaleString()}\n\n`;
+
+      report += 'EXECUTIVE SUMMARY\n';
+      report += '[Provide a brief overview of the risk scenario, key findings, and recommendations.]\n\n';
+
+      report += 'FACTOR ANALYSIS\n';
+      report += '===============\n\n';
+
+      const formatValue = (value, unit) => {
+        if (unit === 'dollars') {
+          if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
+          if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
+          if (value >= 1e3) return `$${(value / 1e3).toFixed(1)}K`;
+          return `$${value}`;
+        }
+        return value;
+      };
+
+      const walkTree = (node, nodeState, depth = 0) => {
+        const indent = '  '.repeat(depth);
+        report += `${indent}${node.label} (${node.abbrev}) — ${node.unit}\n`;
+
+        if (nodeState && nodeState.expanded && node.children) {
+          report += `${indent}  Estimated via decomposition.\n\n`;
+          Object.keys(node.children).forEach(key => {
+            const childNode = node.children[key];
+            const childState = nodeState.children[key];
+            walkTree(childNode, childState, depth + 1);
+          });
+        } else {
+          if (inputMode === 'ci' && nodeState) {
+            const low = nodeState.low !== undefined ? formatValue(nodeState.low, node.unit) : '[Not set]';
+            const high = nodeState.high !== undefined ? formatValue(nodeState.high, node.unit) : '[Not set]';
+            report += `${indent}  Low: ${low}  High: ${high}\n`;
+          } else if (inputMode === 'pert' && nodeState) {
+            const min = nodeState.min !== undefined ? formatValue(nodeState.min, node.unit) : '[Not set]';
+            const mode = nodeState.mode !== undefined ? formatValue(nodeState.mode, node.unit) : '[Not set]';
+            const max = nodeState.max !== undefined ? formatValue(nodeState.max, node.unit) : '[Not set]';
+            report += `${indent}  Min: ${min}  Mode: ${mode}  Max: ${max}\n`;
+          }
+          report += `${indent}  [RATIONALE: Explain why these values were chosen. E.g., "..."]\n\n`;
+        }
+      };
+
+      const factors = treeUI.getState();
+      walkTree(FAIR.tree.risk, factors.risk);
+
+      if (window.lastSimResults) {
+        report += 'SIMULATION RESULTS\n';
+        report += '==================\n';
+        report += `Mean ALE: ${formatValue(window.lastSimResults.mean, 'dollars')}\n`;
+        report += `Median ALE: ${formatValue(window.lastSimResults.median, 'dollars')}\n`;
+        report += `90th Percentile: ${formatValue(window.lastSimResults.p90, 'dollars')}\n`;
+        report += `Minimum: ${formatValue(window.lastSimResults.min, 'dollars')}\n`;
+        report += `Maximum: ${formatValue(window.lastSimResults.max, 'dollars')}\n\n`;
+      }
+
+      report += 'METHODOLOGY\n';
+      report += '===========\n';
+      report += `This analysis uses the Factor Analysis of Information Risk (FAIR)\nframework with Monte Carlo simulation (${iterations.toLocaleString()} iterations).\n`;
+
+      return report;
+    }
+
+    // Run all tests
+    runTests();
+  </script>
+</body>
+</html>

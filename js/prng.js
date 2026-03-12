@@ -116,3 +116,96 @@ export function sampleLognormal(rng, mu, sigma, clampMax) {
 
   return sample;
 }
+
+/**
+ * Version constant for PERT implementation (must match worker.js)
+ */
+export const PERT_VERSION = 1;
+
+/**
+ * Derive Beta-PERT distribution parameters
+ * @param {number} min - Minimum value
+ * @param {number} mode - Most likely value
+ * @param {number} max - Maximum value
+ * @param {number} [lambda=4] - Shape parameter (higher = more concentrated around mode)
+ * @returns {{alpha: number, beta: number, min: number, max: number}} Distribution parameters
+ */
+export function pertParams(min, mode, max, lambda = 4) {
+  const range = max - min;
+  const alpha = 1 + lambda * (mode - min) / range;
+  const beta = 1 + lambda * (max - mode) / range;
+  return { alpha, beta, min, max };
+}
+
+/**
+ * Sample from gamma distribution using Marsaglia and Tsang's method
+ * @param {function(): number} rng - Random number generator
+ * @param {number} alpha - Shape parameter
+ * @returns {number} Sample from Gamma(alpha, 1)
+ */
+function sampleGamma(rng, alpha) {
+  // For alpha < 1, use transformation method
+  if (alpha < 1) {
+    const sample = sampleGamma(rng, alpha + 1);
+    return sample * Math.pow(rng(), 1 / alpha);
+  }
+
+  // Marsaglia and Tsang's method for alpha >= 1
+  const d = alpha - 1/3;
+  const c = 1 / Math.sqrt(9 * d);
+
+  while (true) {
+    let x, v;
+    do {
+      // Box-Muller for standard normal
+      let u1 = rng();
+      if (u1 === 0) u1 = 1e-10;
+      const u2 = rng();
+      x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      v = 1 + c * x;
+    } while (v <= 0);
+
+    v = v * v * v;
+    const u = rng();
+
+    if (u < 1 - 0.0331 * x * x * x * x) {
+      return d * v;
+    }
+
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) {
+      return d * v;
+    }
+  }
+}
+
+/**
+ * Sample from Beta-PERT distribution
+ * @param {function(): number} rng - Random number generator
+ * @param {number} min - Minimum value
+ * @param {number} mode - Most likely value
+ * @param {number} max - Maximum value
+ * @param {number} [lambda=4] - Shape parameter
+ * @returns {number} Sample from PERT distribution in [min, max]
+ */
+export function samplePERT(rng, min, mode, max, lambda = 4) {
+  // Handle degenerate case where min == max (point mass)
+  // This happens when all three PERT values are the same (e.g., [0.001, 0.001, 0.001])
+  if (min === max) {
+    return min;
+  }
+
+  const { alpha, beta } = pertParams(min, mode, max, lambda);
+
+  // Sample from Beta(alpha, beta) using two gamma samples
+  const x = sampleGamma(rng, alpha);
+  const y = sampleGamma(rng, beta);
+  const betaSample = x / (x + y);
+
+  // Scale to [min, max]
+  let sample = min + betaSample * (max - min);
+
+  // Clamp to [min, max] as safety net
+  sample = Math.max(min, Math.min(sample, max));
+
+  return sample;
+}
