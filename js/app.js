@@ -1034,6 +1034,22 @@ function generateReport() {
  * Export chart to PNG or SVG (executive quality)
  */
 function exportChart(format) {
+  if (!lastSimResults) return;
+
+  const { sortedALE, stats } = lastSimResults;
+
+  // Build data points from cached results (same logic as renderExceedanceCurve)
+  const nonZeroALE = sortedALE.filter(v => v > 0);
+  const sourceData = useLogScale ? nonZeroALE : sortedALE;
+  const step = Math.max(1, Math.floor(sourceData.length / 200));
+  const dataPoints = [];
+  for (let idx = 0; idx < sourceData.length; idx += step) {
+    dataPoints.push([sourceData[idx], 1 - (idx / sourceData.length)]);
+  }
+  if (dataPoints.length > 0 && dataPoints[dataPoints.length - 1][0] !== sourceData[sourceData.length - 1]) {
+    dataPoints.push([sourceData[sourceData.length - 1], 0]);
+  }
+
   // Create temporary off-screen container
   const tempContainer = document.createElement('div');
   tempContainer.style.width = '1200px';
@@ -1042,159 +1058,164 @@ function exportChart(format) {
   tempContainer.style.left = '-9999px';
   document.body.appendChild(tempContainer);
 
-  // Initialize temporary chart instance
-  const tempChart = window.echarts.init(tempContainer);
+  // Use SVG renderer for SVG export, canvas for PNG
+  const renderer = format === 'svg' ? 'svg' : 'canvas';
+  const tempChart = window.echarts.init(tempContainer, null, { renderer });
 
-  // Get current scenario name and date
   const scenarioName = document.getElementById('scenario-name').value || 'Untitled Scenario';
   const date = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+    year: 'numeric', month: 'long', day: 'numeric'
   });
   const iterations = document.getElementById('iterations-input').value;
+  const scaleLabel = useLogScale ? 'Annual Loss — Log Scale ($)' : 'Annual Loss ($)';
 
-  // Get current data
-  const currentOption = echartsCurve.getOption();
-
-  // Create executive-quality option
   const exportOption = {
+    animation: false,
     backgroundColor: '#ffffff',
     title: {
-      text: `${scenarioName}`,
+      text: scenarioName,
       subtext: `${date} | ${iterations} iterations`,
       left: 'center',
       top: 10,
-      textStyle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#000000'
-      },
-      subtextStyle: {
-        fontSize: 14,
-        color: '#666666'
-      }
+      textStyle: { fontSize: 20, fontWeight: 'bold', color: '#000000' },
+      subtextStyle: { fontSize: 14, color: '#666666' }
     },
-    textStyle: {
-      color: '#000000',
-      fontSize: 14
+    textStyle: { color: '#000000', fontSize: 14 },
+    legend: {
+      data: [
+        { name: 'Exceedance Curve', icon: 'roundRect' },
+        { name: 'Median', icon: 'roundRect', itemStyle: { color: '#ff8800' } },
+        { name: '90th Percentile', icon: 'roundRect', itemStyle: { color: '#cc0000' } }
+      ],
+      bottom: 8,
+      itemGap: 24,
+      textStyle: { fontSize: 13, color: '#555555' }
     },
     grid: {
       left: 100,
       right: 60,
-      top: 70,
-      bottom: 80
+      top: 85,
+      bottom: 105
     },
     xAxis: {
-      type: 'value',
-      name: 'Annual Loss ($)',
+      type: useLogScale ? 'log' : 'value',
+      name: scaleLabel,
       nameLocation: 'middle',
-      nameGap: 40,
-      nameTextStyle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#000000'
-      },
+      nameGap: 35,
+      nameTextStyle: { fontSize: 14, color: '#444444' },
       axisLabel: {
-        fontSize: 14,
-        color: '#000000',
+        fontSize: 13,
+        color: '#333333',
         formatter: (value) => i18n.formatCompactCurrency(value)
       },
-      axisLine: {
-        lineStyle: {
-          color: '#333333',
-          width: 1
-        }
-      },
-      splitLine: {
-        lineStyle: {
-          color: '#e0e0e0'
-        }
-      }
+      axisLine: { lineStyle: { color: '#999999', width: 1 } },
+      axisTick: { lineStyle: { color: '#999999' } },
+      splitLine: { lineStyle: { color: '#f0f0f0' } }
     },
     yAxis: {
       type: 'value',
       name: 'Probability of Exceedance',
       nameLocation: 'middle',
-      nameGap: 60,
-      nameTextStyle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#000000'
-      },
+      nameGap: 55,
+      nameTextStyle: { fontSize: 14, color: '#444444' },
       min: 0,
       max: 1,
       axisLabel: {
-        fontSize: 14,
-        color: '#000000',
+        fontSize: 13,
+        color: '#333333',
         formatter: (value) => (value * 100).toFixed(0) + '%'
       },
-      axisLine: {
-        lineStyle: {
-          color: '#333333',
-          width: 1
-        }
-      },
-      splitLine: {
-        lineStyle: {
-          color: '#e0e0e0'
+      axisLine: { lineStyle: { color: '#999999', width: 1 } },
+      axisTick: { lineStyle: { color: '#999999' } },
+      splitLine: { lineStyle: { color: '#f0f0f0' } }
+    },
+    series: [
+      {
+        name: 'Exceedance Curve',
+        type: 'line',
+        data: dataPoints,
+        smooth: false,
+        symbol: 'none',
+        lineStyle: { color: '#0066cc', width: 2.5 },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(0, 102, 204, 0.15)' },
+              { offset: 1, color: 'rgba(0, 102, 204, 0.02)' }
+            ]
+          }
+        },
+        markLine: {
+          symbol: 'none',
+          lineStyle: { type: 'dashed', width: 1.5 },
+          data: [
+            [{
+              name: 'Median',
+              xAxis: stats.median,
+              yAxis: 0.88,
+              label: {
+                show: true,
+                position: 'insideStartTop',
+                formatter: () => `Median: ${i18n.formatCompactCurrency(stats.median)}`,
+                fontSize: 12,
+                fontWeight: 'bold',
+                padding: [4, 8],
+                backgroundColor: 'rgba(255, 136, 0, 0.9)',
+                color: '#ffffff',
+                borderRadius: 3
+              },
+              lineStyle: { color: '#ff8800' }
+            }, {
+              xAxis: stats.median,
+              yAxis: 'min',
+              label: { show: false },
+              lineStyle: { color: '#ff8800' }
+            }],
+            [{
+              name: '90th Percentile',
+              xAxis: stats.p90,
+              yAxis: 0.88,
+              label: {
+                show: true,
+                position: 'insideStartTop',
+                formatter: () => `90th: ${i18n.formatCompactCurrency(stats.p90)}`,
+                fontSize: 12,
+                fontWeight: 'bold',
+                padding: [4, 8],
+                backgroundColor: 'rgba(204, 0, 0, 0.9)',
+                color: '#ffffff',
+                borderRadius: 3
+              },
+              lineStyle: { color: '#cc0000' }
+            }, {
+              xAxis: stats.p90,
+              yAxis: 'min',
+              label: { show: false },
+              lineStyle: { color: '#cc0000' }
+            }]
+          ]
         }
       }
-    },
-    series: currentOption.series.map(s => ({
-      ...s,
-      lineStyle: {
-        ...s.lineStyle,
-        width: 3,
-        color: '#0066cc'
-      },
-      markLine: s.markLine ? {
-        ...s.markLine,
-        lineStyle: {
-          ...s.markLine.lineStyle,
-          width: 2
-        },
-        label: {
-          ...s.markLine.label,
-          fontSize: 14,
-          fontWeight: 'bold'
-        },
-        data: s.markLine.data.map(d => ({
-          ...d,
-          lineStyle: {
-            ...d.lineStyle,
-            color: d.name === 'Median' ? '#ff8800' : '#cc0000'
-          }
-        }))
-      } : undefined
-    }))
+    ]
   };
 
   tempChart.setOption(exportOption);
 
-  // Export based on format
-  if (format === 'png') {
-    const url = tempChart.getDataURL({
-      type: 'png',
-      pixelRatio: 3,
-      backgroundColor: '#ffffff'
-    });
+  // Export — link must be in DOM for Safari/Firefox
+  const url = tempChart.getDataURL({
+    type: format === 'svg' ? 'svg' : 'png',
+    pixelRatio: format === 'svg' ? 1 : 3,
+    backgroundColor: '#ffffff'
+  });
 
-    const link = document.createElement('a');
-    link.download = `${scenarioName.replace(/\s+/g, '_')}_${Date.now()}.png`;
-    link.href = url;
-    link.click();
-  } else if (format === 'svg') {
-    const url = tempChart.getDataURL({
-      type: 'svg',
-      backgroundColor: '#ffffff'
-    });
-
-    const link = document.createElement('a');
-    link.download = `${scenarioName.replace(/\s+/g, '_')}_${Date.now()}.svg`;
-    link.href = url;
-    link.click();
-  }
+  const link = document.createElement('a');
+  link.download = `${scenarioName.replace(/\s+/g, '_')}_${Date.now()}.${format}`;
+  link.href = url;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 
   // Clean up
   tempChart.dispose();

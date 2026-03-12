@@ -479,7 +479,7 @@ export class FactorTreeUI {
     itemEl.setAttribute('data-factor-id', factorId);
     itemEl.setAttribute('tabindex', depth === 0 ? '0' : '-1');
     itemEl.className = 'factor-item';
-    itemEl.style.paddingLeft = `${depth * 20}px`;
+    itemEl.style.setProperty('--depth', depth);
 
     // Composite factors have aria-expanded
     if (modelNode.children) {

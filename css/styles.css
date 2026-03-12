@@ -317,7 +317,8 @@ body {
 .example-badge {
   display: inline-block;
   font-size: 10px;
-  padding: 2px 6px;
+  padding-block: 2px;
+  padding-inline: 6px;
   border-radius: 3px;
   background: var(--bg-tertiary);
   color: var(--text-muted);
@@ -337,7 +338,8 @@ body {
   border: none;
   color: var(--accent-red);
   cursor: pointer;
-  padding: 4px 8px;
+  padding-block: 8px;
+  padding-inline: 12px;
   border-radius: 4px;
   font-size: 14px;
   opacity: 0.7;
@@ -373,14 +375,16 @@ body {
 }
 
 #input-panel {
-  inline-size: 45%;
+  flex: 45;
+  min-inline-size: 0;
   border-inline-end: 1px solid var(--border-color);
   padding: 20px;
   overflow-y: auto;
 }
 
 #results-panel {
-  inline-size: 55%;
+  flex: 55;
+  min-inline-size: 0;
   padding: 20px;
   overflow-y: auto;
 }
@@ -422,8 +426,8 @@ body {
   cursor: pointer;
   padding: 0;
   font-size: 14px;
-  inline-size: 20px;
-  block-size: 20px;
+  inline-size: 44px;
+  block-size: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -551,7 +555,8 @@ body {
   background: var(--bg-tertiary);
   border: none;
   color: var(--text-secondary);
-  padding: 5px 14px;
+  padding-block: 5px;
+  padding-inline: 14px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -614,7 +619,8 @@ body {
   background: var(--bg-tertiary);
   border: none;
   color: var(--text-secondary);
-  padding: 5px 14px;
+  padding-block: 5px;
+  padding-inline: 14px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -649,16 +655,13 @@ body {
   border-radius: 6px;
 }
 
-
 .stats-cards {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
 }
 
 .stat-card {
-  flex: 1;
-  min-inline-size: 100px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
@@ -715,7 +718,7 @@ body {
   block-size: 18px;
   border-radius: 3px;
   min-inline-size: 4px;
-  transition: width 0.3s ease;
+  transition: inline-size 0.3s ease;
 }
 
 .breakdown-value {
@@ -916,6 +919,30 @@ body {
     position: fixed;
     inset-block-end: 0;
     inset-inline: 0;
+  }
+
+  .ci-input-row,
+  .pert-input-row {
+    flex-wrap: wrap;
+  }
+
+  .ci-label {
+    inline-size: 100%;
+  }
+
+  .ci-input,
+  .pert-input {
+    flex: 1;
+    min-inline-size: 0;
+    inline-size: auto;
+  }
+
+  .chart-container {
+    block-size: min(280px, 50dvb);
+  }
+
+  .factor-description {
+    padding-inline-start: 0;
   }
 }
 
