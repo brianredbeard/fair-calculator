@@ -525,11 +525,34 @@ export class FactorTreeUI {
 
     itemEl.appendChild(headerEl);
 
-    // Factor description (visible help text)
+    // Factor description (visible help text) with linked references
     if (modelNode.description) {
       const descEl = document.createElement('p');
       descEl.className = 'factor-description';
-      descEl.textContent = modelNode.description;
+
+      const textNode = document.createTextNode(modelNode.description);
+      descEl.appendChild(textNode);
+
+      if (modelNode.references && modelNode.references.length > 0) {
+        const refsSpan = document.createElement('span');
+        refsSpan.className = 'factor-references';
+        refsSpan.appendChild(document.createTextNode(' ['));
+        modelNode.references.forEach((ref, i) => {
+          if (i > 0) {
+            refsSpan.appendChild(document.createTextNode('; '));
+          }
+          const a = document.createElement('a');
+          a.href = ref.url;
+          a.textContent = ref.label;
+          a.title = ref.citation;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          refsSpan.appendChild(a);
+        });
+        refsSpan.appendChild(document.createTextNode(']'));
+        descEl.appendChild(refsSpan);
+      }
+
       itemEl.appendChild(descEl);
     }
 

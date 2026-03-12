@@ -1011,8 +1011,11 @@ function generateReport() {
   }
   report += '\n';
   report += 'References:\n';
-  report += '- Open FAIR Risk Taxonomy (O-RT), The Open Group Standard (C13K)\n';
+  report += '- Open FAIR Risk Taxonomy (O-RT) v3.0.1, The Open Group Standard (C20B, 2021)\n';
+  report += '  https://publications.opengroup.org/c20b\n';
   report += '- Freund & Jones, "Measuring and Managing Information Risk: A FAIR Approach" (2014)\n';
+  report += '  https://www.sciencedirect.com/book/9780124202313/measuring-and-managing-information-risk\n';
+  report += '- FAIR on Wikidata: https://www.wikidata.org/wiki/Q5428720\n';
 
   // Download as .txt file
   const blob = new Blob([report], { type: 'text/plain' });

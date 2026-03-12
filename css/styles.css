@@ -465,6 +465,26 @@ body {
   padding-inline-start: 28px;
 }
 
+.factor-references {
+  white-space: nowrap;
+}
+
+.factor-references a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+}
+
+.factor-references a:hover {
+  border-bottom-style: solid;
+}
+
+.factor-references a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
 .factor-children {
   margin-block-start: 8px;
 }
