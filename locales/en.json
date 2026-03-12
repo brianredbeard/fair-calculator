@@ -28,7 +28,11 @@
       "dollars": "Dollars"
     },
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "stage_1": "Stage 1 (Direct Estimation)",
+    "stage_2": "Stage 2 (Decomposed Estimation)",
+    "expand_all_tooltip": "Expand all factors (Stage 2: full decomposition)",
+    "collapse_all_tooltip": "Collapse all factors"
   },
   "results": {
     "chart_title": "Risk Distribution",

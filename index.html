@@ -22,16 +22,27 @@
           Iterations:
           <input type="number" id="iterations-input" value="10000" min="1000" max="100000" step="1000" aria-label="Simulation iterations">
         </label>
+        <div class="input-mode-toggle" title="Switch between 2-point CI and 3-point PERT inputs">
+          <button id="btn-ci-mode" class="mode-btn active" aria-pressed="true">CI</button>
+          <button id="btn-pert-mode" class="mode-btn" aria-pressed="false">PERT</button>
+        </div>
       </div>
       <div class="top-bar-right">
+        <button id="btn-settings" class="top-bar-btn" aria-label="Settings">⚙️ Settings</button>
         <button id="btn-theme" class="top-bar-btn" aria-label="Toggle theme">Dark</button>
         <button id="btn-copy-url" class="top-bar-btn" aria-label="Copy shareable URL">Copy URL</button>
+        <button id="btn-generate-report" class="top-bar-btn" aria-label="Generate analysis report">Generate Report</button>
         <div class="scenarios-wrapper">
           <button id="btn-scenarios" class="top-bar-btn" aria-label="Saved scenarios">Scenarios ▾</button>
           <div id="scenarios-dropdown" class="scenarios-dropdown" hidden>
             <div id="scenarios-list"></div>
             <div class="scenarios-actions">
               <button id="btn-new-scenario" class="btn-small">+ New</button>
+              <button id="btn-load-examples" class="btn-small">Load Examples</button>
+              <button id="btn-clear-examples" class="btn-small" hidden>Clear Examples</button>
+              <button id="btn-export-json" class="btn-small">Export JSON</button>
+              <button id="btn-import-json" class="btn-small">Import JSON</button>
+              <input type="file" id="import-json-input" accept=".json" style="display:none">
             </div>
           </div>
         </div>
@@ -80,6 +91,28 @@
       <button data-panel="results" class="toggle-btn">Results</button>
     </div>
   </div>
+
+  <!-- Settings Modal -->
+  <dialog id="settings-modal" class="modal" aria-labelledby="settings-title">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="settings-title">Settings</h2>
+        <button id="btn-close-settings" class="btn-close" aria-label="Close settings">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label for="lambda-input" class="setting-label">
+            PERT Lambda (λ)
+            <span class="setting-help">Controls distribution shape: higher values concentrate around mode</span>
+          </label>
+          <div class="setting-control">
+            <input type="range" id="lambda-slider" min="1" max="10" step="0.5" value="4" aria-label="PERT lambda slider">
+            <input type="number" id="lambda-input" min="1" max="10" step="0.5" value="4" aria-label="PERT lambda value">
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
 
   <script src="vendor/echarts.min.js"></script>
   <script src="vendor/pako.min.js"></script>
